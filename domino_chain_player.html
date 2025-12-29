@@ -1,1 +1,321 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chain Dominoes – Play</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
+  .card{max-width:1100px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  h2{margin:0 0 6px 0;}
+  .small{font-size:12px;color:#6b7280;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  button{padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#f9fafb;font-weight:750;cursor:pointer;}
+  button.primary{background:#111827;color:#fff;border-color:#111827;}
+  button.danger{background:#fff1f2;border-color:#fecdd3;}
+  .divider{height:1px;background:#e5e7eb;margin:14px 0;}
+
+  .anchorRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .anchor{
+    border:1px solid #d1d5db;border-radius:14px;padding:10px 12px;background:#f3f4f6;
+    font-weight:850; min-width:260px;
+  }
+
+  .zones{display:grid;grid-template-columns:repeat(6, minmax(0,1fr));gap:10px;}
+  @media (max-width: 1000px){ .zones{grid-template-columns:repeat(3, minmax(0,1fr));} }
+
+  .slot{
+    border:2px dashed #cbd5e1;border-radius:14px;min-height:64px;
+    display:flex;align-items:center;justify-content:center;padding:8px;background:#f8fafc;
+  }
+  .slot.filled{border-style:solid;border-color:#e5e7eb;background:#fff;}
+  .slot.over{border-color:#111827;}
+
+  .bank{display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;}
+  .tile{
+    border:1px solid #d1d5db;border-radius:14px;background:#fff;
+    padding:10px; min-width:240px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    cursor:grab; user-select:none;
+  }
+  .tile:active{cursor:grabbing;}
+  .half{flex:1 1 auto;text-align:center;font-weight:850;padding:8px;border-radius:10px;background:#f3f4f6;}
+  .sep{width:2px;height:44px;background:#e5e7eb;border-radius:2px;}
+  .miniBtn{border:1px solid #d1d5db;background:#f9fafb;border-radius:10px;padding:6px 10px;font-weight:900;cursor:pointer;}
+
+  .feedback{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;color:#111827;font-size:13px;}
+  .ok{background:#ecfdf5;}
+  .bad{background:#fff1f2;}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="row">
+    <div>
+      <h2>Chain Dominoes</h2>
+      <div class="small" id="sub">Drag tiles into the chain. Put them in the correct order.</div>
+    </div>
+    <div class="row" style="justify-content:flex-end;">
+      <button onclick="shuffleBank()">Shuffle bank</button>
+      <button class="danger" onclick="resetAll()">Reset</button>
+      <button class="primary" onclick="checkChain()">Check</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="anchors" class="anchorRow" style="display:none;">
+    <div class="anchor" id="startAnchor"></div>
+    <div class="anchor" id="endAnchor"></div>
+  </div>
+
+  <div class="small" style="margin-bottom:6px;">Chain slots (drop tiles left → right):</div>
+  <div id="slots" class="zones"></div>
+
+  <div class="divider"></div>
+
+  <div class="small" style="margin-bottom:6px;">Tile bank:</div>
+  <div id="bank" class="bank"></div>
+
+  <div id="feedback" class="feedback" style="display:none;"></div>
+</div>
+
+<script>
+  function decodeB64Unicode(b64){
+    try { return decodeURIComponent(escape(atob(b64))); } catch(e){ return null; }
+  }
+  function shuffle(arr){
+    for (let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+  const norm = s => (s||"").trim().toLowerCase();
+  const eq = (a,b) => norm(a) === norm(b);
+
+  const m = (location.hash || "").match(/#p=([^&]+)/);
+  if (!m) { document.getElementById("sub").textContent = "Missing game data in the link."; throw ""; }
+
+  const raw = decodeB64Unicode(m[1]);
+  if (!raw) { document.getElementById("sub").textContent = "Could not read game data."; throw ""; }
+
+  const payload = JSON.parse(raw);
+  const steps = (payload.steps || []).map(s => (s||"").trim()).filter(Boolean);
+  const showAnchors = !!payload.showAnchors;
+  const allowFlip = (payload.allowFlip !== false);
+
+  if (steps.length < 3){
+    document.getElementById("sub").textContent = "Invalid chain (needs at least 3 steps).";
+    throw "";
+  }
+
+  // Build the "answer" tiles from consecutive steps
+  const answerTiles = [];
+  for (let i=0;i<steps.length-1;i++){
+    answerTiles.push({ id: "t"+(i+1), left: steps[i], right: steps[i+1] });
+  }
+
+  const expectedStart = steps[0];
+  const expectedEnd = steps[steps.length-1];
+
+  // State
+  let bankTiles = shuffle(answerTiles.map(t => ({...t})));
+  let chain = Array(answerTiles.length).fill(null);
+
+  const slotsEl = document.getElementById("slots");
+  const bankEl = document.getElementById("bank");
+  const fbEl = document.getElementById("feedback");
+
+  function showFeedback(html, kind){
+    fbEl.style.display = "block";
+    fbEl.className = "feedback " + (kind || "");
+    fbEl.innerHTML = html;
+  }
+  function clearFeedback(){
+    fbEl.style.display = "none";
+    fbEl.className = "feedback";
+    fbEl.innerHTML = "";
+  }
+
+  function makeTileEl(tile){
+    const el = document.createElement("div");
+    el.className = "tile";
+    el.draggable = true;
+    el.dataset.id = tile.id;
+
+    const L = document.createElement("div"); L.className="half"; L.textContent = tile.left;
+    const sep = document.createElement("div"); sep.className="sep";
+    const R = document.createElement("div"); R.className="half"; R.textContent = tile.right;
+
+    el.appendChild(L); el.appendChild(sep); el.appendChild(R);
+
+    if (allowFlip){
+      const flip = document.createElement("button");
+      flip.className = "miniBtn";
+      flip.textContent = "↔";
+      flip.title = "Flip tile";
+      flip.onclick = (e)=>{ e.stopPropagation(); flipTileById(tile.id); };
+      el.appendChild(flip);
+      el.ondblclick = ()=>flipTileById(tile.id);
+    }
+
+    el.addEventListener("dragstart", (e)=>{
+      e.dataTransfer.setData("text/plain", tile.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    return el;
+  }
+
+  function flipTileById(id){
+    let t = bankTiles.find(x => x.id === id);
+    if (t){ [t.left,t.right]=[t.right,t.left]; render(); return; }
+    for (let i=0;i<chain.length;i++){
+      if (chain[i] && chain[i].id === id){
+        [chain[i].left,chain[i].right]=[chain[i].right,chain[i].left];
+        render(); return;
+      }
+    }
+  }
+
+  function placeTileInSlot(id, idx){
+    clearFeedback();
+
+    // If slot already has a tile, return it to bank
+    if (chain[idx]) bankTiles.push(chain[idx]);
+
+    // From bank?
+    const bi = bankTiles.findIndex(t => t.id === id);
+    if (bi !== -1){
+      chain[idx] = bankTiles.splice(bi,1)[0];
+      render(); return;
+    }
+
+    // From another slot?
+    const si = chain.findIndex(t => t && t.id === id);
+    if (si !== -1){
+      const moving = chain[si];
+      chain[si] = null;
+      chain[idx] = moving;
+      render(); return;
+    }
+  }
+
+  function returnTileToBank(slotIdx){
+    if (!chain[slotIdx]) return;
+    bankTiles.push(chain[slotIdx]);
+    chain[slotIdx] = null;
+    render();
+  }
+
+  function render(){
+    // Anchors
+    const anchors = document.getElementById("anchors");
+    if (showAnchors){
+      anchors.style.display = "flex";
+      document.getElementById("startAnchor").textContent = "START: " + expectedStart;
+      document.getElementById("endAnchor").textContent = "END: " + expectedEnd;
+    } else {
+      anchors.style.display = "none";
+    }
+
+    // Slots
+    slotsEl.innerHTML = "";
+    chain.forEach((tile, idx)=>{
+      const slot = document.createElement("div");
+      slot.className = "slot" + (tile ? " filled" : "");
+      slot.dataset.slot = String(idx);
+
+      slot.addEventListener("dragover", (e)=>{ e.preventDefault(); slot.classList.add("over"); });
+      slot.addEventListener("dragleave", ()=>slot.classList.remove("over"));
+      slot.addEventListener("drop", (e)=>{
+        e.preventDefault(); slot.classList.remove("over");
+        const id = e.dataTransfer.getData("text/plain");
+        placeTileInSlot(id, idx);
+      });
+
+      if (tile){
+        const el = makeTileEl(tile);
+        const back = document.createElement("button");
+        back.className = "miniBtn";
+        back.textContent = "↩";
+        back.title = "Return to bank";
+        back.onclick = (e)=>{ e.stopPropagation(); returnTileToBank(idx); };
+        el.appendChild(back);
+        slot.appendChild(el);
+      } else {
+        slot.innerHTML = `<span class="small">Slot ${idx+1}</span>`;
+      }
+
+      slotsEl.appendChild(slot);
+    });
+
+    // Bank
+    bankEl.innerHTML = "";
+    bankTiles.forEach(t => bankEl.appendChild(makeTileEl(t)));
+  }
+
+  function shuffleBank(){
+    bankTiles = shuffle(bankTiles);
+    render();
+  }
+
+  function resetAll(){
+    clearFeedback();
+    chain = Array(answerTiles.length).fill(null);
+    bankTiles = shuffle(answerTiles.map(t => ({...t})));
+    render();
+  }
+
+  function checkChain(){
+    clearFeedback();
+
+    if (chain.some(x => !x)){
+      showFeedback("Fill every slot before checking.", "bad");
+      return;
+    }
+
+    // Check adjacency: right of i equals left of i+1
+    const wrongAfter = [];
+    for (let i=0;i<chain.length-1;i++){
+      if (!eq(chain[i].right, chain[i+1].left)) wrongAfter.push(i);
+    }
+
+    // If anchors are shown, require correct start and end too
+    if (showAnchors){
+      if (!eq(chain[0].left, expectedStart)) wrongAfter.push(-1); // start wrong
+      if (!eq(chain[chain.length-1].right, expectedEnd)) wrongAfter.push(chain.length-1); // end wrong
+    }
+
+    if (wrongAfter.length === 0){
+      showFeedback("✅ Nice! Chain rebuilt correctly.", "ok");
+      return;
+    }
+
+    const parts = [];
+    parts.push(`<b>Not quite.</b> ${wrongAfter.filter(x=>x>=0).length} mismatch(es) between tiles.`);
+    if (showAnchors){
+      if (wrongAfter.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
+      if (wrongAfter.includes(chain.length-1)) parts.push(`<div class="small mono">End tile right side doesn’t match END.</div>`);
+    }
+    const mid = wrongAfter.filter(x=>x>=0);
+    if (mid.length){
+      parts.push(`<div class="small mono">Mismatch after slot(s): ${mid.map(i=>i+1).join(", ")}</div>`);
+    }
+    parts.push(`<div class="small">Tip: try swapping positions (and flipping tiles if enabled).</div>`);
+    showFeedback(parts.join(""), "bad");
+  }
+
+  document.getElementById("sub").textContent = allowFlip
+    ? "Drag tiles into the chain. Double-click a tile (or ↔) to flip."
+    : "Drag tiles into the chain. Put them in the correct order.";
+
+  render();
+</script>
+
+</body>
+</html>
 
