@@ -73,20 +73,16 @@
     word-break: break-all;
   }
   .hint { margin-top: 8px; padding: 10px 12px; background:#f3f4f6; border-radius:12px; font-size:12px; color:#4b5563; }
-
-  /* PRINT: show ONLY #print-area */
-  @media print {
-    body * { visibility: hidden !important; }
-    #print-area, #print-area * { visibility: visible !important; }
-    #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 18px; }
-  }
 </style>
 </head>
 
 <body>
 <div class="card">
   <h2>Connections – Teacher Builder</h2>
-  <div class="hint">Use <b>Load demo</b> to test buttons fast. <b>Copy student link</b> makes a playable URL. <b>Print</b> outputs a grid-only handout (no key).</div>
+  <div class="hint">
+    Use <b>Load demo</b> to test fast. <b>Copy student link</b> makes a playable URL.
+    <b>Print</b> opens a print-only page in a new tab (works even when embedded in Google Sites).
+  </div>
 
   <div class="grid" id="builder"></div>
 
@@ -102,14 +98,16 @@
 </div>
 
 <script>
-  // ✅ Make sure this points to your student page:
+  // Student play page:
   const STUDENT_PLAYER_URL = "https://davidwaltman-lang.github.io/FourScore/player.html";
+
+  // Print-only page we just added:
+  const PRINT_PAGE_URL = "https://davidwaltman-lang.github.io/FourScore/print.html";
 
   const builder = document.getElementById("builder");
   const msg = document.getElementById("msg");
   const linkOut = document.getElementById("linkOut");
 
-  // Build inputs (4 columns)
   for (let i = 0; i < 4; i++) {
     const div = document.createElement("div");
     div.className = "col";
@@ -125,14 +123,13 @@
   }
 
   function collect() {
-    const groups = [...builder.children].map(col => {
+    return [...builder.children].map(col => {
       const inputs = col.querySelectorAll("input");
       return {
         category: (inputs[0].value || "").trim(),
         terms: [...inputs].slice(1).map(i => (i.value || "").trim())
       };
     });
-    return groups;
   }
 
   function validate(groups) {
@@ -155,15 +152,13 @@
     return errors;
   }
 
-  function encode(obj) {
+  function encodeB64Unicode(obj) {
     return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
   }
 
   async function copyToClipboard(text){
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch(e) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch(e) {
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
@@ -213,20 +208,12 @@
       return;
     }
 
-    const link = STUDENT_PLAYER_URL + "#p=" + encode({ groups });
+    const link = STUDENT_PLAYER_URL + "#p=" + encodeB64Unicode({ groups });
     const ok = await copyToClipboard(link);
 
     msg.textContent = ok ? "Student link copied." : "Could not auto-copy. Copy it manually below.";
     linkOut.textContent = link;
     linkOut.style.display = "block";
-  }
-
-  function shuffle(arr){
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
   }
 
   function printGrid() {
@@ -237,54 +224,17 @@
       return;
     }
 
-    const words = shuffle(groups.flatMap(g => g.terms));
+    // Open print-only page in a new tab so printing is allowed even from Google Sites embed
+    const payload = encodeB64Unicode({ groups });
+    const url = PRINT_PAGE_URL + "#p=" + payload;
 
-    // Remove any previous print area
-    const old = document.getElementById("print-area");
-    if (old) old.remove();
-
-    const printDiv = document.createElement("div");
-    printDiv.id = "print-area";
-    printDiv.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
-        <div style="font-weight:900; font-size:18px;">Connections</div>
-        <div style="display:flex; gap:18px; font-size:12px;">
-          <div>Name: _________________________</div>
-          <div>Period: ______</div>
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; max-width:760px;">
-        ${words.map(w => `
-          <div style="
-            border:1px solid #000;
-            border-radius:10px;
-            padding:10px;
-            text-align:center;
-            font-weight:700;
-            min-height:44px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-          ">${w}</div>
-        `).join("")}
-      </div>
-
-      <div style="margin-top:10px; font-size:12px;">Directions: Find four groups of four.</div>
-    `;
-
-    document.body.appendChild(printDiv);
-
-    // Print after DOM updates (Chromebook-friendly)
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        const pa = document.getElementById("print-area");
-        if (pa) pa.remove();
-      }, 600);
-    }, 50);
+    const w = window.open(url, "_blank");
+    if (!w) {
+      alert("Pop-up blocked. Allow pop-ups for this site to print.");
+      return;
+    }
+    msg.textContent = "Opened print view in a new tab.";
   }
 </script>
 </body>
 </html>
-
