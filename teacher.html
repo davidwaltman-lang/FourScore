@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connections – Builder</title>
+<title>Connections – Teacher Builder</title>
 
 <style>
 body {
@@ -45,6 +45,7 @@ button.primary {
 .small {
   font-size: 12px;
   color: #6b7280;
+  margin-top: 8px;
 }
 </style>
 </head>
@@ -60,7 +61,7 @@ button.primary {
     <button onclick="printGrid()">Print grid-only</button>
   </div>
 
-  <div class="small" id="out" style="margin-top:10px;"></div>
+  <div class="small" id="out"></div>
 </div>
 
 <script>
@@ -68,7 +69,6 @@ const STUDENT_PLAYER_URL =
   "https://davidwaltman-lang.github.io/FourScore/player.html";
 
 const builder = document.getElementById("builder");
-let groups = [];
 
 for (let i = 0; i < 4; i++) {
   const div = document.createElement("div");
@@ -83,13 +83,12 @@ for (let i = 0; i < 4; i++) {
 }
 
 function collect() {
-  groups = [];
-  [...builder.children].forEach(col => {
+  return [...builder.children].map(col => {
     const inputs = col.querySelectorAll("input");
-    groups.push({
+    return {
       category: inputs[0].value,
       terms: [...inputs].slice(1).map(i => i.value)
-    });
+    };
   });
 }
 
@@ -98,22 +97,27 @@ function encode(obj) {
 }
 
 function makeLink() {
-  collect();
+  const groups = collect();
   const link = STUDENT_PLAYER_URL + "#p=" + encode({ groups });
   navigator.clipboard.writeText(link);
   document.getElementById("out").textContent = "Student link copied.";
 }
 
 function printGrid() {
-  collect();
+  const groups = collect();
   const words = groups.flatMap(g => g.terms).sort(() => Math.random() - 0.5);
-  const w = window.open("");
-  w.document.write("<h2>Connections</h2><div style='display:grid;grid-template-columns:repeat(4,1fr);gap:10px;'>");
-  words.forEach(t => w.document.write("<div style='border:1px solid #000;padding:10px;text-align:center'>" + t + "</div>"));
-  w.document.write("</div><script>window.print()</script>");
-  w.document.close();
+
+  const printArea = document.createElement("div");
+  printArea.innerHTML = `
+    <h2>Connections</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      ${words.map(w => `<div style="border:1px solid #000;padding:10px;text-align:center">${w}</div>`).join("")}
+    </div>
+  `;
+  document.body.appendChild(printArea);
+  window.print();
+  document.body.removeChild(printArea);
 }
 </script>
 </body>
 </html>
-
