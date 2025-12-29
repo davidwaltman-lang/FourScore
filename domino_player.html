@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vocab Dominoes – Play</title>
+
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
+  .card{max-width:1000px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  h2{margin:0 0 6px 0;}
+  .small{font-size:12px;color:#6b7280;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  button{padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#f9fafb;font-weight:750;cursor:pointer;}
+  button.primary{background:#111827;color:#fff;border-color:#111827;}
+  button.danger{background:#fff1f2;border-color:#fecdd3;}
+  .divider{height:1px;background:#e5e7eb;margin:14px 0;}
+
+  .zones{display:grid;grid-template-columns:repeat(6, minmax(0,1fr));gap:10px;}
+  @media (max-width: 900px){ .zones{grid-template-columns:repeat(3, minmax(0,1fr));} }
+
+  .slot{
+    border:2px dashed #cbd5e1;
+    border-radius:14px;
+    min-height:64px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+    background:#f8fafc;
+  }
+  .slot.filled{border-style:solid;border-color:#e5e7eb;background:#fff;}
+  .slot.over{border-color:#111827;}
+
+  .bank{display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;}
+  .tile{
+    border:1px solid #d1d5db;border-radius:14px;background:#fff;
+    padding:10px 10px; min-width:200px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    cursor:grab; user-select:none;
+  }
+  .tile:active{cursor:grabbing;}
+  .half{flex:1 1 auto; text-align:center; font-weight:800; padding:8px; border-radius:10px; background:#f3f4f6; }
+  .sep{width:2px; height:44px; background:#e5e7eb; border-radius:2px;}
+  .miniBtn{
+    border:1px solid #d1d5db;background:#f9fafb;border-radius:10px;padding:6px 10px;font-weight:800;cursor:pointer;
+  }
+
+  .feedback{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;color:#111827;font-size:13px;}
+  .ok{background:#ecfdf5;}
+  .bad{background:#fff1f2;}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;}
+</style>
+</head>
+
+<body>
+<div class="card">
+  <div class="row">
+    <div>
+      <h2>Vocab Dominoes</h2>
+      <div class="small" id="sub">Drag tiles into the chain. Touching halves are correct if they are a declared pair.</div>
+    </div>
+    <div class="row" style="justify-content:flex-end;">
+      <button onclick="shuffleBank()">Shuffle bank</button>
+      <button class="danger" onclick="resetAll()">Reset</button>
+      <button class="primary" onclick="checkChain()">Check</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="small" style="margin-bottom:6px;">Chain (drop tiles into the slots):</div>
+  <div id="slots" class="zones"></div>
+
+  <div class="divider"></div>
+
+  <div class="small" style="margin-bottom:6px;">Tile bank (drag from here):</div>
+  <div id="bank" class="bank"></div>
+
+  <div id="feedback" class="feedback" style="display:none;"></div>
+</div>
+
+<script>
+  function decodeB64Unicode(b64){
+    try { return decodeURIComponent(escape(atob(b64))); } catch(e){ return null; }
+  }
+  function shuffle(arr){
+    for (let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  const m = (location.hash || "").match(/#p=([^&]+)/);
+  if (!m) {
+    document.getElementById("sub").textContent = "Missing puzzle data in the link.";
+    throw "";
+  }
+  const raw = decodeB64Unicode(m[1]);
+  if (!raw) {
+    document.getElementById("sub").textContent = "Could not read puzzle data.";
+    throw "";
+  }
+  const payload = JSON.parse(raw);
+  const pairs = payload.pairs || [];
+  const requireLoop = !!payload.requireLoop;
+
+  // Build a fast lookup for "declared pair matching" (bidirectional).
+  // Key: lowercased normalized string
+  const norm = s => (s||"").trim().toLowerCase();
+  const pairSet = new Set();
+  pairs.forEach(([a,b]) => {
+    const A = norm(a), B = norm(b);
+    pairSet.add(A + "||" + B);
+    pairSet.add(B + "||" + A);
+  });
+  function isPair(a,b){ return pairSet.has(norm(a) + "||" + norm(b)); }
+
+  // --- TILE GENERATION ---
+  // We automatically generate a solvable loop:
+  // tile i = (B_i | A_{i+1}) so adjacency matches (A_{i+1} with B_{i+1}) via declared pair.
+  const A = pairs.map(p => p[0]);
+  const B = pairs.map(p => p[1]);
+
+  const tiles = pairs.map((p, i) => ({
+    id: "t" + (i+1),
+    left: B[i],
+    right: A[(i+1) % pairs.length]
+  }));
+
+  // State
+  let bankTiles = shuffle(tiles.map(t => ({...t})));
+  let chain = Array(pairs.length).fill(null); // holds tile objects
+
+  const slotsEl = document.getElementById("slots");
+  const bankEl = document.getElementById("bank");
+  const fbEl = document.getElementById("feedback");
+
+  function showFeedback(text, kind){
+    fbEl.style.display = "block";
+    fbEl.className = "feedback " + (kind || "");
+    fbEl.innerHTML = text;
+  }
+
+  function clearFeedback(){ fbEl.style.display = "none"; fbEl.innerHTML = ""; fbEl.className = "feedback"; }
+
+  function makeTileEl(tile){
+    const el = document.createElement("div");
+    el.className = "tile";
+    el.draggable = true;
+    el.dataset.id = tile.id;
+
+    const L = document.createElement("div");
+    L.className = "half";
+    L.textContent = tile.left;
+
+    const sep = document.createElement("div");
+    sep.className = "sep";
+
+    const R = document.createElement("div");
+    R.className = "half";
+    R.textContent = tile.right;
+
+    const flip = document.createElement("button");
+    flip.className = "miniBtn";
+    flip.type = "button";
+    flip.textContent = "↔";
+    flip.title = "Flip tile";
+    flip.onclick = (e) => {
+      e.stopPropagation();
+      flipTileById(tile.id);
+    };
+
+    el.appendChild(L);
+    el.appendChild(sep);
+    el.appendChild(R);
+    el.appendChild(flip);
+
+    el.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", tile.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    // Double-click flips too
+    el.ondblclick = () => flipTileById(tile.id);
+
+    return el;
+  }
+
+  function flipTileById(id){
+    // Find tile in bank or chain and swap left/right
+    let t = bankTiles.find(x => x.id === id);
+    if (t) { [t.left, t.right] = [t.right, t.left]; render(); return; }
+
+    for (let i=0;i<chain.length;i++){
+      if (chain[i] && chain[i].id === id){
+        [chain[i].left, chain[i].right] = [chain[i].right, chain[i].left];
+        render();
+        return;
+      }
+    }
+  }
+
+  function render(){
+    // Slots
+    slotsEl.innerHTML = "";
+    chain.forEach((tile, idx) => {
+      const slot = document.createElement("div");
+      slot.className = "slot" + (tile ? " filled" : "");
+      slot.dataset.slot = String(idx);
+
+      slot.addEventListener("dragover", (e) => { e.preventDefault(); slot.classList.add("over"); });
+      slot.addEventListener("dragleave", () => slot.classList.remove("over"));
+      slot.addEventListener("drop", (e) => {
+        e.preventDefault();
+        slot.classList.remove("over");
+        const id = e.dataTransfer.getData("text/plain");
+        placeTileInSlot(id, idx);
+      });
+
+      if (tile){
+        const el = makeTileEl(tile);
+
+        // Add a "return to bank" button
+        const back = document.createElement("button");
+        back.className = "miniBtn";
+        back.textContent = "↩";
+        back.title = "Return to bank";
+        back.onclick = (e) => { e.stopPropagation(); returnTileToBank(idx); };
+
+        el.appendChild(back);
+        slot.appendChild(el);
+      } else {
+        slot.innerHTML = `<span class="small">Slot ${idx+1}</span>`;
+      }
+
+      slotsEl.appendChild(slot);
+    });
+
+    // Bank
+    bankEl.innerHTML = "";
+    bankTiles.forEach(tile => bankEl.appendChild(makeTileEl(tile)));
+  }
+
+  function placeTileInSlot(id, idx){
+    clearFeedback();
+
+    // If slot already has tile, return it to bank first
+    if (chain[idx]) bankTiles.push(chain[idx]);
+
+    // Remove tile from bank or from another slot
+    const fromBankIdx = bankTiles.findIndex(t => t.id === id);
+    if (fromBankIdx !== -1){
+      chain[idx] = bankTiles.splice(fromBankIdx, 1)[0];
+      render();
+      return;
+    }
+
+    // If dragged from another slot, move it
+    const fromSlotIdx = chain.findIndex(t => t && t.id === id);
+    if (fromSlotIdx !== -1){
+      const moving = chain[fromSlotIdx];
+      chain[fromSlotIdx] = null;
+      chain[idx] = moving;
+      render();
+      return;
+    }
+  }
+
+  function returnTileToBank(slotIdx){
+    if (!chain[slotIdx]) return;
+    bankTiles.push(chain[slotIdx]);
+    chain[slotIdx] = null;
+    render();
+  }
+
+  function shuffleBank(){
+    bankTiles = shuffle(bankTiles);
+    render();
+  }
+
+  function resetAll(){
+    clearFeedback();
+    chain = Array(pairs.length).fill(null);
+    bankTiles = shuffle(tiles.map(t => ({...t})));
+    render();
+  }
+
+  function checkChain(){
+    clearFeedback();
+
+    // Must fill all slots
+    if (chain.some(x => !x)){
+      showFeedback("Fill every slot before checking.", "bad");
+      return;
+    }
+
+    // Check adjacency: right of i pairs with left of i+1
+    let wrong = [];
+    for (let i=0;i<chain.length-1;i++){
+      const r = chain[i].right;
+      const l = chain[i+1].left;
+      if (!isPair(r,l)) wrong.push(i);
+    }
+
+    // Optional loop check
+    if (requireLoop){
+      const lastR = chain[chain.length-1].right;
+      const firstL = chain[0].left;
+      if (!isPair(lastR, firstL)) wrong.push(chain.length-1);
+    }
+
+    if (wrong.length === 0){
+      showFeedback(requireLoop
+        ? "✅ Perfect! The entire loop matches."
+        : "✅ Perfect! All adjacent matches are correct.", "ok");
+      return;
+    }
+
+    // Give helpful feedback without revealing the key
+    const lines = [];
+    lines.push(`<b>Not quite.</b> ${wrong.length} connection(s) don’t match.`);
+    lines.push(`<div class="small">Tip: try flipping tiles (↔) or swapping positions.</div>`);
+    lines.push(`<div class="small mono">Mismatch after slot(s): ${wrong.map(i => i+1).join(", ")}</div>`);
+    if (requireLoop){
+      lines.push(`<div class="small">Loop required: last → first must also be a declared pair.</div>`);
+    }
+    showFeedback(lines.join("<br>"), "bad");
+  }
+
+  // Kickoff
+  document.getElementById("sub").textContent =
+    requireLoop
+      ? "Drag tiles into the chain. Adjacent halves must be declared pairs. Loop required (last connects to first)."
+      : "Drag tiles into the chain. Adjacent halves must be declared pairs (either direction).";
+
+  render();
+</script>
+</body>
+</html>
