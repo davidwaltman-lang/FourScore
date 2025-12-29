@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vocab Dominoes – Teacher Builder</title>
+
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
+  .card{max-width:980px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  h2{margin:0 0 8px 0;}
+  .hint{margin:10px 0 14px 0;padding:10px 12px;background:#f3f4f6;border-radius:12px;font-size:12px;color:#4b5563;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button{padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#f9fafb;font-weight:750;cursor:pointer;}
+  button.primary{background:#111827;color:#fff;border-color:#111827;}
+  button.danger{background:#fff1f2;border-color:#fecdd3;}
+  .small{font-size:12px;color:#6b7280;margin-top:8px;}
+  .outBox{margin-top:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:12px;color:#111827;word-break:break-all;}
+  .pairs{display:grid;grid-template-columns: 1fr 1fr auto;gap:10px;align-items:center;}
+  input{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:12px;outline:none;}
+  input:focus{border-color:#6b7280;}
+  .pairHead{font-size:12px;color:#6b7280;font-weight:700;margin:8px 0 6px 0;}
+  .toggle{display:flex;gap:8px;align-items:center;font-size:12px;color:#374151;}
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h2>Vocab Dominoes – Teacher Builder</h2>
+  <div class="hint">
+    Enter <b>pairs that belong together</b> (Term ↔ Definition, Concept ↔ Example, Cause ↔ Effect, etc).<br>
+    Students will drag domino tiles into a chain. Two touching halves are correct if they are a <b>declared pair</b> (either direction).
+  </div>
+
+  <div class="row" style="justify-content:space-between;">
+    <div class="toggle">
+      <input id="requireLoop" type="checkbox" style="width:auto;">
+      <label for="requireLoop">Require full loop (first connects to last)</label>
+    </div>
+
+    <div class="row">
+      <button onclick="loadDemo()">Load demo</button>
+      <button class="danger" onclick="clearAll()">Clear</button>
+      <button onclick="addPair()">Add pair</button>
+      <button class="primary" onclick="copyStudentLink()">Copy student link</button>
+    </div>
+  </div>
+
+  <div class="pairHead">Pairs (left ↔ right)</div>
+  <div id="pairs" class="pairs"></div>
+
+  <div class="small" id="msg"></div>
+  <div class="outBox" id="linkOut" style="display:none;"></div>
+</div>
+
+<script>
+  const STUDENT_PLAYER_URL = "https://davidwaltman-lang.github.io/FourScore/domino_player.html";
+
+  const pairsEl = document.getElementById("pairs");
+  const msgEl = document.getElementById("msg");
+  const linkOut = document.getElementById("linkOut");
+  const requireLoopEl = document.getElementById("requireLoop");
+
+  function makePairRow(a="", b="") {
+    const aInp = document.createElement("input");
+    aInp.placeholder = "Left item (e.g., Term)";
+    aInp.value = a;
+
+    const bInp = document.createElement("input");
+    bInp.placeholder = "Right item (e.g., Definition)";
+    bInp.value = b;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "danger";
+    delBtn.textContent = "Remove";
+    delBtn.onclick = () => {
+      aInp.remove(); bInp.remove(); delBtn.remove();
+      msgEl.textContent = "";
+      linkOut.style.display = "none";
+    };
+
+    pairsEl.appendChild(aInp);
+    pairsEl.appendChild(bInp);
+    pairsEl.appendChild(delBtn);
+  }
+
+  function addPair(){ makePairRow(); }
+
+  function getPairs() {
+    const kids = [...pairsEl.children];
+    const out = [];
+    for (let i=0;i<kids.length;i+=3){
+      const a = (kids[i].value || "").trim();
+      const b = (kids[i+1].value || "").trim();
+      out.push([a,b]);
+    }
+    return out;
+  }
+
+  function validate(pairs){
+    const errs = [];
+    if (pairs.length < 3) errs.push("Add at least 3 pairs (more is better).");
+
+    pairs.forEach((p, i) => {
+      if (!p[0]) errs.push(`Pair ${i+1}: left side is blank.`);
+      if (!p[1]) errs.push(`Pair ${i+1}: right side is blank.`);
+    });
+
+    // Prevent exact duplicates
+    const norm = pairs.map(([a,b]) => (a+"||"+b).toLowerCase());
+    const seen = new Set();
+    norm.forEach((k,i)=>{
+      if (seen.has(k)) errs.push(`Duplicate pair found at row ${i+1}.`);
+      seen.add(k);
+    });
+
+    return errs;
+  }
+
+  function encodeB64Unicode(obj){
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+
+  async function copyToClipboard(text){
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  async function copyStudentLink(){
+    const pairs = getPairs();
+    const errs = validate(pairs);
+    if (errs.length){
+      alert("Fix these first:\n\n" + errs.join("\n"));
+      return;
+    }
+
+    const payload = {
+      pairs,
+      requireLoop: !!requireLoopEl.checked
+    };
+
+    const link = STUDENT_PLAYER_URL + "#p=" + encodeB64Unicode(payload);
+    const ok = await copyToClipboard(link);
+
+    msgEl.textContent = ok ? "Student link copied." : "Could not auto-copy. Copy it manually below.";
+    linkOut.textContent = link;
+    linkOut.style.display = "block";
+  }
+
+  function clearAll(){
+    pairsEl.innerHTML = "";
+    for (let i=0;i<8;i++) addPair(); // default 8 rows
+    requireLoopEl.checked = false;
+    msgEl.textContent = "Cleared.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
+
+  function loadDemo(){
+    pairsEl.innerHTML = "";
+    const demo = [
+      ["Inflation", "General rise in prices"],
+      ["Fiscal policy", "Government spending & taxes"],
+      ["Tariff", "Tax on imports"],
+      ["Opportunity cost", "Next best alternative"],
+      ["Elastic demand", "Quantity changes a lot when price changes"],
+      ["Monopoly", "Single seller dominates market"],
+      ["GDP", "Value of final goods/services produced"],
+      ["Unemployment rate", "Percent of labor force without jobs"]
+    ];
+    demo.forEach(([a,b]) => makePairRow(a,b));
+    requireLoopEl.checked = false;
+    msgEl.textContent = "Demo loaded.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
+
+  // Initialize with a few blank rows
+  clearAll();
+</script>
+</body>
+</html>
