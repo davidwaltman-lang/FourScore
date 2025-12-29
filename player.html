@@ -1,1 +1,159 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connections – Play</title>
+
+<style>
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: #f8fafc;
+  margin: 0;
+  padding: 20px;
+}
+.card {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+.tile {
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.tile.selected {
+  outline: 3px solid #111827;
+}
+.solved {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+button {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.primary {
+  background: #111827;
+  color: white;
+}
+.small {
+  font-size: 12px;
+  color: #6b7280;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h2>Connections</h2>
+  <div class="small" id="status">Open the link your teacher gave you.</div>
+
+  <div id="solved"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="controls">
+    <div class="small" id="count">Selected: 0 / 4</div>
+    <div>
+      <button onclick="clearSel()">Clear</button>
+      <button class="primary" onclick="submit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function decode(b64) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(b64)))); }
+  catch { return null; }
+}
+
+const hash = location.hash.match(/#p=(.+)/);
+if (!hash) {
+  document.getElementById("status").textContent = "No puzzle found.";
+  throw "";
+}
+
+const puzzle = decode(hash[1]);
+const groups = puzzle.groups;
+
+let tiles = [];
+let selected = [];
+let solved = [];
+
+groups.forEach((g, gi) =>
+  g.terms.forEach(t => tiles.push({ text: t, group: gi }))
+);
+
+tiles.sort(() => Math.random() - 0.5);
+
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  tiles.forEach((t, i) => {
+    if (t.locked) return;
+    const d = document.createElement("div");
+    d.className = "tile" + (selected.includes(i) ? " selected" : "");
+    d.textContent = t.text;
+    d.onclick = () => toggle(i);
+    grid.appendChild(d);
+  });
+  document.getElementById("count").textContent = `Selected: ${selected.length} / 4`;
+}
+
+function toggle(i) {
+  if (selected.includes(i)) selected = selected.filter(x => x !== i);
+  else if (selected.length < 4) selected.push(i);
+  render();
+}
+
+function clearSel() {
+  selected = [];
+  render();
+}
+
+function submit() {
+  if (selected.length !== 4) return;
+  const g = tiles[selected[0]].group;
+  if (!selected.every(i => tiles[i].group === g)) {
+    clearSel();
+    return;
+  }
+  selected.forEach(i => tiles[i].locked = true);
+  solved.push(g);
+  const s = document.createElement("div");
+  s.className = "solved";
+  s.textContent = groups[g].category + ": " + groups[g].terms.join(", ");
+  document.getElementById("solved").appendChild(s);
+  clearSel();
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
 
