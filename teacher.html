@@ -6,141 +6,285 @@
 <title>Connections – Teacher Builder</title>
 
 <style>
-body {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  background: #f8fafc;
-  margin: 0;
-  padding: 20px;
-}
-.card {
-  max-width: 900px;
-  margin: auto;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-input {
-  width: 100%;
-  padding: 8px;
-  margin-top: 6px;
-}
-button {
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  font-weight: 700;
-  cursor: pointer;
-}
-button.primary {
-  background: #111827;
-  color: white;
-}
-.small {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 8px;
-}
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: #f8fafc;
+    margin: 0;
+    padding: 20px;
+  }
+  .card {
+    max-width: 980px;
+    margin: auto;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+  }
+  h2 { margin: 0 0 10px 0; }
+  .small { font-size: 12px; color: #6b7280; margin-top: 8px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .col {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px;
+    background: #fafafa;
+  }
+  .colTitle { font-weight: 850; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 9px 10px;
+    margin-top: 7px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    background: #fff;
+    outline: none;
+  }
+  input:focus { border-color: #6b7280; }
+  .btnRow { display:flex; gap:10px; flex-wrap:wrap; margin-top: 16px; align-items:center; }
+  button {
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  button.primary {
+    background: #111827;
+    color: white;
+    border-color: #111827;
+  }
+  button.danger {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .outBox{
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 12px;
+    color: #111827;
+    word-break: break-all;
+  }
+  .hint { margin-top: 8px; padding: 10px 12px; background:#f3f4f6; border-radius:12px; font-size:12px; color:#4b5563; }
+
+  /* PRINT: show ONLY #print-area */
+  @media print {
+    body * { visibility: hidden !important; }
+    #print-area, #print-area * { visibility: visible !important; }
+    #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 18px; }
+  }
 </style>
 </head>
 
 <body>
 <div class="card">
   <h2>Connections – Teacher Builder</h2>
+  <div class="hint">Use <b>Load demo</b> to test buttons fast. <b>Copy student link</b> makes a playable URL. <b>Print</b> outputs a grid-only handout (no key).</div>
 
   <div class="grid" id="builder"></div>
 
-  <div style="margin-top:16px;">
-  <button onclick="loadDemo()">Load demo</button>
-  <button onclick="makeLink()">Copy student link</button>
-  <button onclick="printGrid()">Print grid-only</button>
-  <div class="small" style="margin-top:6px;">Tip: Click “Load demo” to test buttons fast.</div>
-</div>
+  <div class="btnRow">
+    <button onclick="loadDemo()">Load demo</button>
+    <button class="danger" onclick="clearAll()">Clear</button>
+    <button onclick="makeLink()">Copy student link</button>
+    <button class="primary" onclick="printGrid()">Print grid-only (Name/Period)</button>
+  </div>
 
-
-  <div class="small" id="out"></div>
+  <div class="small" id="msg"></div>
+  <div class="outBox" id="linkOut" style="display:none;"></div>
 </div>
 
 <script>
-const STUDENT_PLAYER_URL =
-  "https://davidwaltman-lang.github.io/FourScore/player.html";
+  // ✅ Make sure this points to your student page:
+  const STUDENT_PLAYER_URL = "https://davidwaltman-lang.github.io/FourScore/player.html";
 
-const builder = document.getElementById("builder");
+  const builder = document.getElementById("builder");
+  const msg = document.getElementById("msg");
+  const linkOut = document.getElementById("linkOut");
 
-for (let i = 0; i < 4; i++) {
-  const div = document.createElement("div");
-  div.innerHTML = `
-    <input placeholder="Category ${i+1}">
-    <input placeholder="Term 1">
-    <input placeholder="Term 2">
-    <input placeholder="Term 3">
-    <input placeholder="Term 4">
-  `;
-  builder.appendChild(div);
-}
+  // Build inputs (4 columns)
+  for (let i = 0; i < 4; i++) {
+    const div = document.createElement("div");
+    div.className = "col";
+    div.innerHTML = `
+      <div class="colTitle">Category ${i+1}</div>
+      <input placeholder="Category name">
+      <input placeholder="Term 1">
+      <input placeholder="Term 2">
+      <input placeholder="Term 3">
+      <input placeholder="Term 4">
+    `;
+    builder.appendChild(div);
+  }
 
-function collect() {
-  return [...builder.children].map(col => {
-    const inputs = col.querySelectorAll("input");
-    return {
-      category: inputs[0].value,
-      terms: [...inputs].slice(1).map(i => i.value)
-    };
-  });
-}
+  function collect() {
+    const groups = [...builder.children].map(col => {
+      const inputs = col.querySelectorAll("input");
+      return {
+        category: (inputs[0].value || "").trim(),
+        terms: [...inputs].slice(1).map(i => (i.value || "").trim())
+      };
+    });
+    return groups;
+  }
 
-function encode(obj) {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
-}
+  function validate(groups) {
+    const errors = [];
 
-function makeLink() {
-  const groups = collect();
-  const link = STUDENT_PLAYER_URL + "#p=" + encode({ groups });
-  navigator.clipboard.writeText(link);
-  document.getElementById("out").textContent = "Student link copied.";
-}
+    groups.forEach((g, i) => {
+      if (!g.category) errors.push(`Category ${i+1} needs a name.`);
+      g.terms.forEach((t, ti) => { if (!t) errors.push(`Category ${i+1} term ${ti+1} is blank.`); });
+    });
 
-function printGrid() {
-  const groups = collect();
-  const words = groups.flatMap(g => g.terms).sort(() => Math.random() - 0.5);
+    const allTerms = groups.flatMap(g => g.terms);
+    const norm = allTerms.map(t => t.toLowerCase());
+    const dups = new Set();
+    norm.forEach((t, i) => {
+      if (!t) return;
+      if (norm.indexOf(t) !== i) dups.add(allTerms[i]);
+    });
+    if (dups.size) errors.push(`Duplicate term(s): ${[...dups].join(", ")}`);
 
-  const printArea = document.createElement("div");
-  printArea.innerHTML = `
-    <h2>Connections</h2>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-      ${words.map(w => `<div style="border:1px solid #000;padding:10px;text-align:center">${w}</div>`).join("")}
-    </div>
-  `;
-  document.body.appendChild(printArea);
-  window.print();
-  document.body.removeChild(printArea);
-}
+    return errors;
+  }
+
+  function encode(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+
+  async function copyToClipboard(text){
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch(e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
   function loadDemo() {
-  const demo = [
-    { category: "Economics Basics", terms: ["Inflation", "Recession", "Tariff", "Subsidy"] },
-    { category: "Psych Terms", terms: ["Schema", "Cognition", "Reinforcement", "Extinction"] },
-    { category: "Bills-ish", terms: ["Allen", "Diggs", "Kelly", "Thomas"] },
-    { category: "Kitchen Stuff", terms: ["Whisk", "Ladle", "Spatula", "Colander"] }
-  ];
+    const demo = [
+      { category: "Economics Basics", terms: ["Inflation", "Recession", "Tariff", "Subsidy"] },
+      { category: "Psych Terms",       terms: ["Schema", "Cognition", "Reinforcement", "Extinction"] },
+      { category: "Bills-ish",         terms: ["Allen", "Diggs", "Kelly", "Thomas"] },
+      { category: "Kitchen Stuff",     terms: ["Whisk", "Ladle", "Spatula", "Colander"] }
+    ];
 
-  [...builder.children].forEach((col, i) => {
-    const inputs = col.querySelectorAll("input");
-    inputs[0].value = demo[i].category;
-    inputs[1].value = demo[i].terms[0];
-    inputs[2].value = demo[i].terms[1];
-    inputs[3].value = demo[i].terms[2];
-    inputs[4].value = demo[i].terms[3];
-  });
+    [...builder.children].forEach((col, i) => {
+      const inputs = col.querySelectorAll("input");
+      inputs[0].value = demo[i].category;
+      inputs[1].value = demo[i].terms[0];
+      inputs[2].value = demo[i].terms[1];
+      inputs[3].value = demo[i].terms[2];
+      inputs[4].value = demo[i].terms[3];
+    });
 
-  document.getElementById("out").textContent = "Demo loaded.";
-}
+    msg.textContent = "Demo loaded.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
 
+  function clearAll() {
+    [...builder.children].forEach(col => {
+      col.querySelectorAll("input").forEach(inp => inp.value = "");
+    });
+    msg.textContent = "Cleared.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
+
+  async function makeLink() {
+    const groups = collect();
+    const errs = validate(groups);
+    if (errs.length) {
+      alert("Fix these first:\n\n" + errs.join("\n"));
+      return;
+    }
+
+    const link = STUDENT_PLAYER_URL + "#p=" + encode({ groups });
+    const ok = await copyToClipboard(link);
+
+    msg.textContent = ok ? "Student link copied." : "Could not auto-copy. Copy it manually below.";
+    linkOut.textContent = link;
+    linkOut.style.display = "block";
+  }
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function printGrid() {
+    const groups = collect();
+    const errs = validate(groups);
+    if (errs.length) {
+      alert("Fix these first:\n\n" + errs.join("\n"));
+      return;
+    }
+
+    const words = shuffle(groups.flatMap(g => g.terms));
+
+    // Remove any previous print area
+    const old = document.getElementById("print-area");
+    if (old) old.remove();
+
+    const printDiv = document.createElement("div");
+    printDiv.id = "print-area";
+    printDiv.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="font-weight:900; font-size:18px;">Connections</div>
+        <div style="display:flex; gap:18px; font-size:12px;">
+          <div>Name: _________________________</div>
+          <div>Period: ______</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; max-width:760px;">
+        ${words.map(w => `
+          <div style="
+            border:1px solid #000;
+            border-radius:10px;
+            padding:10px;
+            text-align:center;
+            font-weight:700;
+            min-height:44px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+          ">${w}</div>
+        `).join("")}
+      </div>
+
+      <div style="margin-top:10px; font-size:12px;">Directions: Find four groups of four.</div>
+    `;
+
+    document.body.appendChild(printDiv);
+
+    // Print after DOM updates (Chromebook-friendly)
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        const pa = document.getElementById("print-area");
+        if (pa) pa.remove();
+      }, 600);
+    }, 50);
+  }
 </script>
 </body>
 </html>
+
