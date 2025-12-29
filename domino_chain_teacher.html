@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chain Dominoes – Teacher Builder</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
+  .card{max-width:980px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  h2{margin:0 0 8px 0;}
+  .hint{margin:10px 0 14px 0;padding:10px 12px;background:#f3f4f6;border-radius:12px;font-size:12px;color:#4b5563;line-height:1.35;}
+  textarea{
+    width:100%; min-height:260px; resize:vertical;
+    padding:12px; border:1px solid #d1d5db; border-radius:14px; outline:none;
+    font-size:14px; line-height:1.3; background:#fff;
+  }
+  textarea:focus{border-color:#6b7280;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px;}
+  .rowLeft{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button{padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#f9fafb;font-weight:750;cursor:pointer;}
+  button.primary{background:#111827;color:#fff;border-color:#111827;}
+  button.danger{background:#fff1f2;border-color:#fecdd3;}
+  .toggle{display:flex;gap:8px;align-items:center;font-size:12px;color:#374151;}
+  .small{font-size:12px;color:#6b7280;margin-top:8px;}
+  .outBox{margin-top:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:12px;color:#111827;word-break:break-all;}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Chain Dominoes – Teacher Builder</h2>
+  <div class="hint">
+    Paste an <b>ordered list</b> (one item per line). The game builds domino tiles for each step: (line 1 | line 2), (line 2 | line 3), etc.<br>
+    Students drag tiles into the correct order to rebuild the chain.
+  </div>
+
+  <textarea id="steps" placeholder="Example:
+Inflation
+General rise in prices
+Purchasing power falls
+Cost of living increases
+CPI tends to rise"></textarea>
+
+  <div class="row">
+    <div class="rowLeft">
+      <div class="toggle">
+        <input id="showAnchors" type="checkbox">
+        <label for="showAnchors">Show Start/End anchors to students</label>
+      </div>
+      <div class="toggle">
+        <input id="allowFlip" type="checkbox" checked>
+        <label for="allowFlip">Allow tile flip (↔)</label>
+      </div>
+    </div>
+
+    <div class="rowLeft">
+      <button onclick="loadDemo()">Load demo</button>
+      <button class="danger" onclick="clearAll()">Clear</button>
+      <button class="primary" onclick="copyStudentLink()">Copy student link</button>
+    </div>
+  </div>
+
+  <div class="small" id="msg"></div>
+  <div class="outBox" id="linkOut" style="display:none;"></div>
+</div>
+
+<script>
+  const STUDENT_PLAYER_URL = "https://davidwaltman-lang.github.io/FourScore/domino_chain_player.html";
+
+  const stepsEl = document.getElementById("steps");
+  const showAnchorsEl = document.getElementById("showAnchors");
+  const allowFlipEl = document.getElementById("allowFlip");
+  const msgEl = document.getElementById("msg");
+  const linkOut = document.getElementById("linkOut");
+
+  function normalizeLines(text){
+    return (text || "")
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  function validate(steps){
+    const errs = [];
+    if (steps.length < 3) errs.push("Enter at least 3 lines (start, middle, end).");
+
+    // Avoid exact duplicates (common copy/paste mistake)
+    const low = steps.map(s => s.toLowerCase());
+    const seen = new Set();
+    const dups = new Set();
+    low.forEach((v,i)=>{
+      if (seen.has(v)) dups.add(steps[i]);
+      seen.add(v);
+    });
+    if (dups.size) errs.push("Duplicate line(s): " + [...dups].join(", "));
+    return errs;
+  }
+
+  function encodeB64Unicode(obj){
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+
+  async function copyToClipboard(text){
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  async function copyStudentLink(){
+    const steps = normalizeLines(stepsEl.value);
+    const errs = validate(steps);
+    if (errs.length){
+      alert("Fix these first:\n\n" + errs.join("\n"));
+      return;
+    }
+
+    const payload = {
+      steps,
+      showAnchors: !!showAnchorsEl.checked,
+      allowFlip: !!allowFlipEl.checked
+    };
+
+    const link = STUDENT_PLAYER_URL + "#p=" + encodeB64Unicode(payload);
+    const ok = await copyToClipboard(link);
+
+    msgEl.textContent = ok ? "Student link copied." : "Could not auto-copy. Copy it manually below.";
+    linkOut.textContent = link;
+    linkOut.style.display = "block";
+  }
+
+  function clearAll(){
+    stepsEl.value = "";
+    showAnchorsEl.checked = false;
+    allowFlipEl.checked = true;
+    msgEl.textContent = "Cleared.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
+
+  function loadDemo(){
+    stepsEl.value =
+`Inflation
+General rise in prices
+Purchasing power falls
+Real income buys less
+Cost of living feels higher`;
+    showAnchorsEl.checked = true;
+    allowFlipEl.checked = true;
+    msgEl.textContent = "Demo loaded.";
+    linkOut.style.display = "none";
+    linkOut.textContent = "";
+  }
+</script>
+
+</body>
+</html>
