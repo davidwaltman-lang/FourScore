@@ -121,6 +121,26 @@ function printGrid() {
   window.print();
   document.body.removeChild(printArea);
 }
+  function loadDemo() {
+  const demo = [
+    { category: "Economics Basics", terms: ["Inflation", "Recession", "Tariff", "Subsidy"] },
+    { category: "Psych Terms", terms: ["Schema", "Cognition", "Reinforcement", "Extinction"] },
+    { category: "Bills-ish", terms: ["Allen", "Diggs", "Kelly", "Thomas"] },
+    { category: "Kitchen Stuff", terms: ["Whisk", "Ladle", "Spatula", "Colander"] }
+  ];
+
+  [...builder.children].forEach((col, i) => {
+    const inputs = col.querySelectorAll("input");
+    inputs[0].value = demo[i].category;
+    inputs[1].value = demo[i].terms[0];
+    inputs[2].value = demo[i].terms[1];
+    inputs[3].value = demo[i].terms[2];
+    inputs[4].value = demo[i].terms[3];
+  });
+
+  document.getElementById("out").textContent = "Demo loaded.";
+}
+
 </script>
 </body>
 </html>
