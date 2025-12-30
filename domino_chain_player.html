@@ -6,7 +6,7 @@
 <title>Chain Dominoes – Play</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
-  .card{max-width:1100px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  .card{max-width:980px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
   h2{margin:0 0 6px 0;}
   .small{font-size:12px;color:#6b7280;}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
@@ -18,101 +18,109 @@
   .anchorRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
   .anchor{
     border:1px solid #d1d5db;border-radius:14px;padding:10px 12px;background:#f3f4f6;
-    font-weight:850; min-width:260px;
+    font-weight:850; flex:1 1 320px;
   }
 
-  /* Slots are responsive and will "contain" the tile */
-  .zones{
-    display:grid;
-    grid-template-columns:repeat(6, minmax(0,1fr));
+  /* ===== Chain = single column (no overlap possible) ===== */
+  .chainWrap{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    background:#fafafa;
+    padding:10px;
+  }
+  .chain{
+    display:flex;
+    flex-direction:column;
     gap:10px;
-    align-items:stretch;
   }
-  @media (max-width: 1000px){
-    .zones{grid-template-columns:repeat(3, minmax(0,1fr));}
-  }
-
   .slot{
     border:2px dashed #cbd5e1;
     border-radius:14px;
-    min-height:72px;
     background:#f8fafc;
-    padding:0;                 /* key */
+    min-height:78px;
     display:flex;
-    align-items:stretch;       /* key */
-    justify-content:stretch;   /* key */
-    overflow:hidden;           /* key: makes it feel "inside" */
+    align-items:stretch;
+    justify-content:stretch;
+    overflow:hidden;
   }
   .slot.over{border-color:#111827;}
-  .slot .placeholder{
+  .slot.filled{border-style:solid;border-color:#e5e7eb;background:#fff;}
+  .slotLabel{
     width:100%;
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:10px;
-  }
-  .slot.filled{
-    border-style:solid;
-    border-color:#e5e7eb;
-    background:#fff;
+    padding:12px;
+    color:#94a3b8;
+    font-size:12px;
+    font-weight:700;
   }
 
-  /* Tile base */
+  /* ===== Tile visuals (same everywhere) ===== */
   .tile{
-    border:1px solid #d1d5db;
-    border-radius:14px;
-    background:#fff;
+    width:100%;
+    display:flex;
+    align-items:stretch;
+    gap:10px;
     padding:10px;
+    background:#fff;
+  }
+  .tileCore{
+    width:100%;
     display:flex;
     align-items:center;
-    justify-content:space-between;
     gap:10px;
-    user-select:none;
+    border:1px solid #d1d5db;
+    border-radius:14px;
+    padding:10px;
+    background:#fff;
   }
-
-  /* Bank tiles can be wider */
-  .tile.bank{
-    min-width:260px;
-    cursor:grab;
-  }
-  .tile.bank:active{cursor:grabbing;}
-
-  /* Slot tiles must fit the slot */
-  .tile.in-slot{
-    width:100%;        /* key */
-    min-width:0;       /* key */
-    border:none;       /* key: slot already provides border */
-    border-radius:0;   /* key */
-    cursor:grab;
-  }
-  .tile.in-slot:active{cursor:grabbing;}
-
   .half{
     flex:1 1 0;
     text-align:center;
     font-weight:850;
-    padding:8px;
-    border-radius:10px;
+    padding:10px;
+    border-radius:12px;
     background:#f3f4f6;
-    min-width:0;         /* allow wrapping */
-    overflow:hidden;
-    text-overflow:ellipsis;
+    min-width:0;
+    word-break:break-word;
   }
   .sep{width:2px;height:44px;background:#e5e7eb;border-radius:2px;flex:0 0 auto;}
-
+  .tileBtns{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex:0 0 auto;
+  }
   .miniBtn{
-    border:1px solid #d1d5db;background:#f9fafb;border-radius:10px;
-    padding:6px 10px;font-weight:900;cursor:pointer;flex:0 0 auto;
+    border:1px solid #d1d5db;background:#f9fafb;border-radius:12px;
+    padding:8px 10px;font-weight:900;cursor:pointer;
   }
 
-  .bank{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    padding:10px;
+  /* Drag handle feel */
+  .draggable{cursor:grab; user-select:none;}
+  .draggable:active{cursor:grabbing;}
+
+  /* Selected tile (tap-to-place) */
+  .selected{
+    outline:3px solid #111827;
+    outline-offset:2px;
+  }
+
+  /* ===== Bank = responsive grid ===== */
+  .bankWrap{
     border:1px solid #e5e7eb;
     border-radius:14px;
     background:#fafafa;
+    padding:10px;
+  }
+  .bankGrid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+  }
+  @media (max-width: 760px){
+    .bankGrid{grid-template-columns:repeat(1, minmax(0,1fr));}
   }
 
   .feedback{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;color:#111827;font-size:13px;}
@@ -127,7 +135,7 @@
   <div class="row">
     <div>
       <h2>Chain Dominoes</h2>
-      <div class="small" id="sub">Drag tiles into the chain. Put them in the correct order.</div>
+      <div class="small" id="sub">Drag tiles into the chain, or tap a tile then tap a slot.</div>
     </div>
     <div class="row" style="justify-content:flex-end;">
       <button onclick="shuffleBank()">Shuffle bank</button>
@@ -143,13 +151,20 @@
     <div class="anchor" id="endAnchor"></div>
   </div>
 
-  <div class="small" style="margin-bottom:6px;">Chain slots (drop tiles left → right):</div>
-  <div id="slots" class="zones"></div>
+  <div class="small" style="margin-bottom:6px;">Chain (top → bottom):</div>
+  <div class="chainWrap">
+    <div id="slots" class="chain"></div>
+  </div>
 
   <div class="divider"></div>
 
-  <div class="small" style="margin-bottom:6px;">Tile bank:</div>
-  <div id="bank" class="bank"></div>
+  <div class="row" style="margin-bottom:6px;">
+    <div class="small">Tile bank:</div>
+    <div class="small">Tip: Tap tile → tap slot (touch-friendly).</div>
+  </div>
+  <div class="bankWrap">
+    <div id="bank" class="bankGrid"></div>
+  </div>
 
   <div id="feedback" class="feedback" style="display:none;"></div>
 </div>
@@ -170,7 +185,6 @@
 
   const m = (location.hash || "").match(/#p=([^&]+)/);
   if (!m) { document.getElementById("sub").textContent = "Missing game data in the link."; throw ""; }
-
   const raw = decodeB64Unicode(m[1]);
   if (!raw) { document.getElementById("sub").textContent = "Could not read game data."; throw ""; }
 
@@ -184,7 +198,7 @@
     throw "";
   }
 
-  // Build answer tiles from consecutive steps
+  // Answer tiles: consecutive steps
   const answerTiles = [];
   for (let i=0;i<steps.length-1;i++){
     answerTiles.push({ id: "t"+(i+1), left: steps[i], right: steps[i+1] });
@@ -196,6 +210,7 @@
   // State
   let bankTiles = shuffle(answerTiles.map(t => ({...t})));
   let chain = Array(answerTiles.length).fill(null);
+  let selectedId = null; // for tap-to-place
 
   const slotsEl = document.getElementById("slots");
   const bankEl = document.getElementById("bank");
@@ -212,36 +227,6 @@
     fbEl.innerHTML = "";
   }
 
-  function makeTileEl(tile, where){
-    const el = document.createElement("div");
-    el.className = "tile " + (where === "slot" ? "in-slot" : "bank");
-    el.draggable = true;
-    el.dataset.id = tile.id;
-
-    const L = document.createElement("div"); L.className="half"; L.textContent = tile.left;
-    const sep = document.createElement("div"); sep.className="sep";
-    const R = document.createElement("div"); R.className="half"; R.textContent = tile.right;
-
-    el.appendChild(L); el.appendChild(sep); el.appendChild(R);
-
-    if (allowFlip){
-      const flip = document.createElement("button");
-      flip.className = "miniBtn";
-      flip.textContent = "↔";
-      flip.title = "Flip tile";
-      flip.onclick = (e)=>{ e.stopPropagation(); flipTileById(tile.id); };
-      el.appendChild(flip);
-      el.ondblclick = ()=>flipTileById(tile.id);
-    }
-
-    el.addEventListener("dragstart", (e)=>{
-      e.dataTransfer.setData("text/plain", tile.id);
-      e.dataTransfer.effectAllowed = "move";
-    });
-
-    return el;
-  }
-
   function flipTileById(id){
     let t = bankTiles.find(x => x.id === id);
     if (t){ [t.left,t.right]=[t.right,t.left]; render(); return; }
@@ -253,23 +238,35 @@
     }
   }
 
+  function setSelected(id){
+    selectedId = (selectedId === id) ? null : id;
+    render();
+  }
+
   function placeTileInSlot(id, idx){
     clearFeedback();
 
+    // If slot has a tile, send it back to bank
     if (chain[idx]) bankTiles.push(chain[idx]);
 
+    // From bank?
     const bi = bankTiles.findIndex(t => t.id === id);
     if (bi !== -1){
       chain[idx] = bankTiles.splice(bi,1)[0];
-      render(); return;
+      selectedId = null;
+      render();
+      return;
     }
 
+    // From another slot?
     const si = chain.findIndex(t => t && t.id === id);
     if (si !== -1){
       const moving = chain[si];
       chain[si] = null;
       chain[idx] = moving;
-      render(); return;
+      selectedId = null;
+      render();
+      return;
     }
   }
 
@@ -278,6 +275,62 @@
     bankTiles.push(chain[slotIdx]);
     chain[slotIdx] = null;
     render();
+  }
+
+  function makeTileUI(tile, where, slotIdx){
+    // Wrapper so we can highlight selection cleanly
+    const wrap = document.createElement("div");
+    wrap.className = "tile " + (where === "bank" ? "draggable" : "draggable");
+    if (selectedId === tile.id) wrap.classList.add("selected");
+    wrap.draggable = true;
+    wrap.dataset.id = tile.id;
+
+    const core = document.createElement("div");
+    core.className = "tileCore";
+
+    const L = document.createElement("div"); L.className="half"; L.textContent = tile.left;
+    const sep = document.createElement("div"); sep.className="sep";
+    const R = document.createElement("div"); R.className="half"; R.textContent = tile.right;
+
+    core.appendChild(L); core.appendChild(sep); core.appendChild(R);
+
+    const btns = document.createElement("div");
+    btns.className = "tileBtns";
+
+    if (allowFlip){
+      const flip = document.createElement("button");
+      flip.className = "miniBtn";
+      flip.textContent = "↔";
+      flip.title = "Flip tile";
+      flip.onclick = (e)=>{ e.stopPropagation(); flipTileById(tile.id); };
+      btns.appendChild(flip);
+      wrap.ondblclick = ()=>flipTileById(tile.id);
+    }
+
+    if (where === "slot"){
+      const back = document.createElement("button");
+      back.className = "miniBtn";
+      back.textContent = "↩";
+      back.title = "Return to bank";
+      back.onclick = (e)=>{ e.stopPropagation(); returnTileToBank(slotIdx); };
+      btns.appendChild(back);
+    }
+
+    // Tap-to-place selection
+    wrap.onclick = (e)=>{
+      // Don’t toggle selection if clicking a button
+      if (e.target && e.target.tagName === "BUTTON") return;
+      setSelected(tile.id);
+    };
+
+    wrap.addEventListener("dragstart", (e)=>{
+      e.dataTransfer.setData("text/plain", tile.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    wrap.appendChild(core);
+    wrap.appendChild(btns);
+    return wrap;
   }
 
   function render(){
@@ -291,7 +344,7 @@
       anchors.style.display = "none";
     }
 
-    // Slots
+    // Slots (vertical)
     slotsEl.innerHTML = "";
     chain.forEach((tile, idx)=>{
       const slot = document.createElement("div");
@@ -306,30 +359,29 @@
         placeTileInSlot(id, idx);
       });
 
+      // Tap-to-place: tap slot after selecting a tile
+      slot.onclick = ()=>{
+        if (selectedId) placeTileInSlot(selectedId, idx);
+      };
+
       if (tile){
-        const el = makeTileEl(tile, "slot");
-
-        const back = document.createElement("button");
-        back.className = "miniBtn";
-        back.textContent = "↩";
-        back.title = "Return to bank";
-        back.onclick = (e)=>{ e.stopPropagation(); returnTileToBank(idx); };
-
-        el.appendChild(back);
-        slot.appendChild(el);
+        slot.appendChild(makeTileUI(tile, "slot", idx));
       } else {
         const ph = document.createElement("div");
-        ph.className = "placeholder small";
-        ph.textContent = "Slot " + (idx+1);
+        ph.className = "slotLabel";
+        ph.textContent = selectedId ? "Tap to place selected tile here" : ("Slot " + (idx+1));
         slot.appendChild(ph);
       }
 
       slotsEl.appendChild(slot);
     });
 
-    // Bank
+    // Bank (grid)
     bankEl.innerHTML = "";
-    bankTiles.forEach(t => bankEl.appendChild(makeTileEl(t, "bank")));
+    bankTiles.forEach(t => {
+      const el = makeTileUI(t, "bank", -1);
+      bankEl.appendChild(el);
+    });
   }
 
   function shuffleBank(){
@@ -339,6 +391,7 @@
 
   function resetAll(){
     clearFeedback();
+    selectedId = null;
     chain = Array(answerTiles.length).fill(null);
     bankTiles = shuffle(answerTiles.map(t => ({...t})));
     render();
@@ -371,7 +424,7 @@
     parts.push(`<b>Not quite.</b>`);
     const mid = wrongAfter.filter(x=>x>=0);
     if (mid.length){
-      parts.push(`<div class="small mono">Mismatch after slot(s): ${mid.map(i=>i+1).join(", ")}</div>`);
+      parts.push(`<div class="small mono">Mismatch after tile(s): ${mid.map(i=>i+1).join(", ")}</div>`);
     }
     if (showAnchors){
       if (wrongAfter.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
@@ -382,12 +435,10 @@
   }
 
   document.getElementById("sub").textContent = allowFlip
-    ? "Drag tiles into the chain. Double-click a tile (or ↔) to flip."
-    : "Drag tiles into the chain. Put them in the correct order.";
+    ? "Drag tiles into the chain, or tap a tile then tap a slot. Double-click a tile (or ↔) to flip."
+    : "Drag tiles into the chain, or tap a tile then tap a slot.";
 
   render();
 </script>
-
 </body>
 </html>
-
