@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chain Dominoes – Play</title>
+<title>Chain Dominoes – Train Mode</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f8fafc;margin:0;padding:20px;}
-  .card{max-width:980px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
+  .card{max-width:1100px;margin:auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;}
   h2{margin:0 0 6px 0;}
   .small{font-size:12px;color:#6b7280;}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
@@ -15,13 +15,6 @@
   button.danger{background:#fff1f2;border-color:#fecdd3;}
   .divider{height:1px;background:#e5e7eb;margin:14px 0;}
 
-  .anchorRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
-  .anchor{
-    border:1px solid #d1d5db;border-radius:14px;padding:10px 12px;background:#f3f4f6;
-    font-weight:850; flex:1 1 320px;
-  }
-
-  /* Progress */
   .progressWrap{
     margin-top:8px;
     border:1px solid #e5e7eb;
@@ -34,64 +27,43 @@
     justify-content:space-between;
     flex-wrap:wrap;
   }
-  .barOuter{
-    flex:1 1 320px;
-    height:12px;
-    border-radius:999px;
-    background:#e5e7eb;
-    overflow:hidden;
-  }
-  .barInner{
-    height:100%;
-    width:0%;
-    background:#111827;
-  }
-  .metric{font-size:12px;color:#111827;font-weight:850;}
+  .barOuter{flex:1 1 320px;height:12px;border-radius:999px;background:#e5e7eb;overflow:hidden;}
+  .barInner{height:100%;width:0%;background:#111827;}
+  .metric{font-size:12px;color:#111827;font-weight:900;}
   .note{font-size:12px;color:#6b7280;}
 
-  /* Chain = single column */
-  .chainWrap{
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-    background:#fafafa;
-    padding:10px;
+  .anchorRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .anchor{border:1px solid #d1d5db;border-radius:14px;padding:10px 12px;background:#f3f4f6;font-weight:900;flex:1 1 320px;}
+
+  /* Train area */
+  .trainWrap{border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;padding:12px;}
+  .trainTop{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .endBox{
+    border:2px dashed #cbd5e1;border-radius:14px;background:#f8fafc;
+    padding:10px 12px;min-width:260px;flex:1 1 260px;
   }
-  .chain{display:flex;flex-direction:column;gap:10px;}
-  .slot{
-    border:2px dashed #cbd5e1;
-    border-radius:14px;
-    background:#f8fafc;
-    min-height:86px;
+  .endBox.over{border-color:#111827;}
+  .endLabel{font-size:12px;color:#64748b;font-weight:900;margin-bottom:6px;}
+  .endValue{font-size:14px;color:#111827;font-weight:900;word-break:break-word;}
+  .endHint{font-size:12px;color:#6b7280;margin-top:6px;}
+
+  .train{
     display:flex;
+    gap:10px;
+    flex-wrap:wrap;
     align-items:stretch;
-    justify-content:stretch;
-    overflow:hidden;
-  }
-  .slot.over{border-color:#111827;}
-  .slot.filled{border-style:solid;border-color:#e5e7eb;background:#fff;}
-  .slotLabel{
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:12px;
-    color:#94a3b8;
-    font-size:12px;
-    font-weight:800;
-    text-align:center;
   }
 
   /* Tile */
   .tileWrap{
-    width:100%;
-    padding:10px;
     display:flex;
-    gap:10px;
+    gap:8px;
     align-items:center;
     user-select:none;
   }
   .tileCore{
-    flex:1 1 auto;
+    width:320px;
+    max-width:100%;
     display:flex;
     gap:10px;
     align-items:center;
@@ -113,50 +85,27 @@
   }
   .sep{width:2px;height:44px;background:#e5e7eb;border-radius:2px;flex:0 0 auto;}
   .tileBtns{display:flex;gap:8px;align-items:center;flex:0 0 auto;}
-  .miniBtn{
-    border:1px solid #d1d5db;background:#f9fafb;border-radius:12px;
-    padding:8px 10px;font-weight:900;cursor:pointer;
-  }
+  .miniBtn{border:1px solid #d1d5db;background:#f9fafb;border-radius:12px;padding:8px 10px;font-weight:900;cursor:pointer;}
+
   .draggable{cursor:grab;}
   .draggable:active{cursor:grabbing;}
   .selected{outline:3px solid #111827; outline-offset:2px; border-radius:16px;}
 
   /* Bank */
-  .bankWrap{
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-    background:#fafafa;
-    padding:10px;
-  }
-  .bankGrid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:10px;
-  }
-  @media (max-width: 760px){
-    .bankGrid{grid-template-columns:repeat(1, minmax(0,1fr));}
-  }
+  .bankWrap{border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;padding:12px;}
+  .bankGrid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:10px;}
+  @media (max-width: 980px){ .bankGrid{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  @media (max-width: 680px){ .bankGrid{grid-template-columns:repeat(1, minmax(0,1fr));} }
 
-  /* Feedback + toast */
   .feedback{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;color:#111827;font-size:13px;}
   .ok{background:#ecfdf5;}
   .bad{background:#fff1f2;}
   .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;}
 
   .toast{
-    position:fixed;
-    left:50%;
-    bottom:16px;
-    transform:translateX(-50%);
-    background:#111827;
-    color:#fff;
-    padding:10px 12px;
-    border-radius:999px;
-    font-size:12px;
-    font-weight:800;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .18s ease;
+    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    background:#111827;color:#fff;padding:10px 12px;border-radius:999px;
+    font-size:12px;font-weight:900;opacity:0;pointer-events:none;transition:opacity .18s ease;
   }
   .toast.show{opacity:1;}
 </style>
@@ -166,20 +115,20 @@
 <div class="card">
   <div class="row">
     <div>
-      <h2>Chain Dominoes</h2>
-      <div class="small" id="sub">Drag tiles into the chain, or tap a tile then tap a slot.</div>
+      <h2>Domino Train</h2>
+      <div class="small" id="sub">Play tiles only on the LEFT or RIGHT end. Drag or tap-to-play.</div>
 
       <div class="progressWrap">
-        <div class="metric" id="metricText">Correct connections: 0 / 0</div>
+        <div class="metric" id="metricText">Correct links in train: 0 / 0</div>
         <div class="barOuter"><div class="barInner" id="barInner"></div></div>
-        <div class="note" id="noteText">Fill slots to see progress.</div>
+        <div class="note" id="noteText">Build the train by matching ends.</div>
       </div>
     </div>
 
     <div class="row" style="justify-content:flex-end;">
       <button onclick="shuffleBank()">Shuffle bank</button>
       <button class="danger" onclick="resetAll()">Reset</button>
-      <button class="primary" onclick="checkChain()">Check</button>
+      <button class="primary" onclick="checkTrain()">Check</button>
     </div>
   </div>
 
@@ -190,16 +139,29 @@
     <div class="anchor" id="endAnchor"></div>
   </div>
 
-  <div class="small" style="margin-bottom:6px;">Chain (top → bottom):</div>
-  <div class="chainWrap">
-    <div id="slots" class="chain"></div>
+  <div class="small" style="margin-bottom:6px;">Train (tiles you’ve played):</div>
+  <div class="trainWrap">
+    <div class="trainTop">
+      <div id="leftEnd" class="endBox">
+        <div class="endLabel">LEFT END</div>
+        <div class="endValue" id="leftValue"></div>
+        <div class="endHint">Drop a tile here (or tap here after selecting a tile).</div>
+      </div>
+      <div id="rightEnd" class="endBox">
+        <div class="endLabel">RIGHT END</div>
+        <div class="endValue" id="rightValue"></div>
+        <div class="endHint">Drop a tile here (or tap here after selecting a tile).</div>
+      </div>
+    </div>
+
+    <div id="train" class="train"></div>
   </div>
 
   <div class="divider"></div>
 
   <div class="row" style="margin-bottom:6px;">
     <div class="small">Tile bank:</div>
-    <div class="small">Tip: Tap tile → tap slot (touch-friendly).</div>
+    <div class="small">Tip: Tap a tile → tap LEFT END or RIGHT END.</div>
   </div>
   <div class="bankWrap">
     <div id="bank" class="bankGrid"></div>
@@ -239,7 +201,7 @@
     throw "";
   }
 
-  // Answer tiles
+  // Answer tiles: consecutive steps
   const answerTiles = [];
   for (let i=0;i<steps.length-1;i++){
     answerTiles.push({ id:"t"+(i+1), left:steps[i], right:steps[i+1] });
@@ -248,24 +210,25 @@
   const expectedEnd = steps[steps.length-1];
 
   // State
-  let bankTiles = shuffle(answerTiles.map(t => ({...t})));
-  let chain = Array(answerTiles.length).fill(null);
-  let selectedId = null;
+  let bankTiles, trainTiles, selectedId;
 
-  const slotsEl = document.getElementById("slots");
+  const trainEl = document.getElementById("train");
   const bankEl = document.getElementById("bank");
   const fbEl = document.getElementById("feedback");
   const metricText = document.getElementById("metricText");
   const noteText = document.getElementById("noteText");
   const barInner = document.getElementById("barInner");
   const toastEl = document.getElementById("toast");
+  const leftEndEl = document.getElementById("leftEnd");
+  const rightEndEl = document.getElementById("rightEnd");
+  const leftValueEl = document.getElementById("leftValue");
+  const rightValueEl = document.getElementById("rightValue");
 
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     setTimeout(()=>toastEl.classList.remove("show"), 1100);
   }
-
   function showFeedback(html, kind){
     fbEl.style.display = "block";
     fbEl.className = "feedback " + (kind || "");
@@ -277,114 +240,103 @@
     fbEl.innerHTML = "";
   }
 
-  function flipTileById(id){
-    let t = bankTiles.find(x => x.id === id);
-    if (t){ [t.left,t.right]=[t.right,t.left]; render(); return; }
-    for (let i=0;i<chain.length;i++){
-      if (chain[i] && chain[i].id === id){
-        [chain[i].left,chain[i].right]=[chain[i].right,chain[i].left];
-        render(); return;
-      }
-    }
-  }
+  function flip(tile){ [tile.left, tile.right] = [tile.right, tile.left]; }
 
   function setSelected(id){
     selectedId = (selectedId === id) ? null : id;
     render();
   }
 
-  function getTileById(id){
-    let t = bankTiles.find(x=>x.id===id);
-    if (t) return t;
-    t = chain.find(x=>x && x.id===id);
-    return t || null;
+  function getOpenEnds(){
+    // Train left end is trainTiles[0].left, right end is last.right
+    const left = trainTiles[0].left;
+    const right = trainTiles[trainTiles.length-1].right;
+    return { left, right };
   }
 
-  function neighborScoreAt(slotIdx, tile){
-    // Score is how well tile fits with already-placed neighbors
-    // Left neighbor = chain[slotIdx-1], compare neighbor.right to tile.left
-    // Right neighbor = chain[slotIdx+1], compare tile.right to neighbor.left
-    let score = 0;
-    const leftN = (slotIdx > 0) ? chain[slotIdx-1] : null;
-    const rightN = (slotIdx < chain.length-1) ? chain[slotIdx+1] : null;
-
-    if (leftN) score += eq(leftN.right, tile.left) ? 1 : 0;
-    if (rightN) score += eq(tile.right, rightN.left) ? 1 : 0;
-
-    // If anchors are on, also reward matching start/end at extremes
-    if (showAnchors){
-      if (slotIdx === 0) score += eq(tile.left, expectedStart) ? 1 : 0;
-      if (slotIdx === chain.length-1) score += eq(tile.right, expectedEnd) ? 1 : 0;
-    }
-    return score;
+  function canPlayOnLeft(tile){
+    const ends = getOpenEnds();
+    return eq(tile.right, ends.left); // tile.right touches left end
+  }
+  function canPlayOnRight(tile){
+    const ends = getOpenEnds();
+    return eq(tile.left, ends.right); // tile.left touches right end
   }
 
-  function bestEmptySlotForTile(tile){
-    let best = { idx:null, score:-1 };
-    for (let i=0;i<chain.length;i++){
-      if (chain[i]) continue;
-      const s = neighborScoreAt(i, tile);
-      if (s > best.score){
-        best = { idx:i, score:s };
-      }
-    }
-    return best;
+  function removeFromBank(id){
+    const i = bankTiles.findIndex(t=>t.id===id);
+    if (i===-1) return null;
+    return bankTiles.splice(i,1)[0];
   }
 
-  function removeTileFromWherever(id){
-    // Remove from bank
-    const bi = bankTiles.findIndex(t=>t.id===id);
-    if (bi !== -1) return bankTiles.splice(bi,1)[0];
-
-    // Remove from chain
-    const si = chain.findIndex(t=>t && t.id===id);
-    if (si !== -1){
-      const t = chain[si];
-      chain[si] = null;
-      return t;
-    }
-    return null;
-  }
-
-  function placeTileInSlot(id, idx){
+  function attemptPlay(id, side){
     clearFeedback();
+    const tile = removeFromBank(id);
+    if (!tile) return;
 
-    const moving = removeTileFromWherever(id);
-    if (!moving) return;
+    // Try without flip first; if not playable, try flip (if allowed)
+    let played = false;
 
-    // If slot occupied, bump it to bank
-    if (chain[idx]) bankTiles.push(chain[idx]);
+    const tryLeft = () => {
+      if (canPlayOnLeft(tile)) { trainTiles.unshift(tile); played=true; return; }
+    };
+    const tryRight = () => {
+      if (canPlayOnRight(tile)) { trainTiles.push(tile); played=true; return; }
+    };
 
-    chain[idx] = moving;
-    selectedId = null;
-
-    // AUTO-SNAP: if there is a better empty slot, move it there
-    // (Only if current score is 0 and a better slot exists with score >=1)
-    const hereScore = neighborScoreAt(idx, moving);
-    const best = bestEmptySlotForTile(moving);
-
-    if (hereScore === 0 && best.idx !== null && best.score >= 1){
-      // move to better slot
-      chain[idx] = null;
-      chain[best.idx] = moving;
-      toast("Auto-snapped to a better fit ✅");
+    if (side === "left"){
+      tryLeft();
+      if (!played && allowFlip){ flip(tile); tryLeft(); }
+    } else {
+      tryRight();
+      if (!played && allowFlip){ flip(tile); tryRight(); }
     }
 
+    if (!played){
+      // Put it back
+      bankTiles.push(tile);
+      toast("No match on that end ❌");
+      render();
+      return;
+    }
+
+    selectedId = null;
+    toast("Played ✅");
     render();
   }
 
-  function returnTileToBank(slotIdx){
-    if (!chain[slotIdx]) return;
-    bankTiles.push(chain[slotIdx]);
-    chain[slotIdx] = null;
-    render();
+  function computeProgress(){
+    // Correct links = number of correct adjacent joins inside the train
+    let correct = 0;
+    for (let i=0;i<trainTiles.length-1;i++){
+      if (eq(trainTiles[i].right, trainTiles[i+1].left)) correct++;
+    }
+    const total = answerTiles.length; // in a full chain with N tiles, there are N-1 joins; but our goal is N-1 joins.
+    const joinsTotal = Math.max(0, answerTiles.length - 1);
+
+    // We report joins correct out of joinsTotal (more intuitive)
+    return { correct, joinsTotal };
   }
 
-  function makeTileUI(tile, where, slotIdx){
+  function renderProgress(){
+    const p = computeProgress();
+    metricText.textContent = `Correct links in train: ${p.correct} / ${p.joinsTotal}`;
+
+    const pct = (p.joinsTotal === 0) ? 0 : Math.round((p.correct / p.joinsTotal) * 100);
+    barInner.style.width = pct + "%";
+
+    if (bankTiles.length > 0){
+      noteText.textContent = `Tiles remaining: ${bankTiles.length}. You can only play on the ends.`;
+    } else {
+      noteText.textContent = "All tiles played — hit Check.";
+    }
+  }
+
+  function makeTileUI(tile, where){
     const wrap = document.createElement("div");
     wrap.className = "tileWrap draggable";
-    if (selectedId === tile.id) wrap.classList.add("selected");
-    wrap.draggable = true;
+    if (where==="bank" && selectedId === tile.id) wrap.classList.add("selected");
+    wrap.draggable = (where==="bank");
     wrap.dataset.id = tile.id;
 
     const core = document.createElement("div");
@@ -399,91 +351,31 @@
     const btns = document.createElement("div");
     btns.className = "tileBtns";
 
-    if (allowFlip){
-      const flip = document.createElement("button");
-      flip.className = "miniBtn";
-      flip.textContent = "↔";
-      flip.title = "Flip tile";
-      flip.onclick = (e)=>{ e.stopPropagation(); flipTileById(tile.id); };
-      btns.appendChild(flip);
-      wrap.ondblclick = ()=>flipTileById(tile.id);
-    }
-
-    if (where === "slot"){
-      const back = document.createElement("button");
-      back.className = "miniBtn";
-      back.textContent = "↩";
-      back.title = "Return to bank";
-      back.onclick = (e)=>{ e.stopPropagation(); returnTileToBank(slotIdx); };
-      btns.appendChild(back);
+    if (allowFlip && where==="bank"){
+      const flipBtn = document.createElement("button");
+      flipBtn.className = "miniBtn";
+      flipBtn.textContent = "↔";
+      flipBtn.title = "Flip tile";
+      flipBtn.onclick = (e)=>{ e.stopPropagation(); flip(tile); render(); };
+      btns.appendChild(flipBtn);
+      wrap.ondblclick = ()=>{ flip(tile); render(); };
     }
 
     wrap.onclick = (e)=>{
       if (e.target && e.target.tagName === "BUTTON") return;
-      setSelected(tile.id);
+      if (where==="bank") setSelected(tile.id);
     };
 
-    wrap.addEventListener("dragstart", (e)=>{
-      e.dataTransfer.setData("text/plain", tile.id);
-      e.dataTransfer.effectAllowed = "move";
-    });
+    if (where==="bank"){
+      wrap.addEventListener("dragstart", (e)=>{
+        e.dataTransfer.setData("text/plain", tile.id);
+        e.dataTransfer.effectAllowed = "move";
+      });
+    }
 
     wrap.appendChild(core);
     wrap.appendChild(btns);
     return wrap;
-  }
-
-  function computeProgress(){
-    // Total connections = chain.length-1, plus optional start/end anchor checks (if enabled)
-    const totalConnections = Math.max(0, chain.length - 1);
-    let correct = 0;
-    let filledPairsCounted = 0;
-
-    // Adjacent correctness (count only where both tiles exist)
-    for (let i=0;i<chain.length-1;i++){
-      if (!chain[i] || !chain[i+1]) continue;
-      filledPairsCounted++;
-      if (eq(chain[i].right, chain[i+1].left)) correct++;
-    }
-
-    // Anchors (optional, only if slot 0 or last filled)
-    let anchorTotal = 0;
-    let anchorCorrect = 0;
-    if (showAnchors){
-      anchorTotal = 2;
-      if (chain[0]) anchorCorrect += eq(chain[0].left, expectedStart) ? 1 : 0;
-      if (chain[chain.length-1]) anchorCorrect += eq(chain[chain.length-1].right, expectedEnd) ? 1 : 0;
-    }
-
-    const total = totalConnections + anchorTotal;
-    const got = correct + anchorCorrect;
-
-    // For the bar, we show progress out of total possible checks, but note if not all are currently “checkable”
-    return {
-      total,
-      got,
-      filledPairsCounted,
-      totalConnections,
-      anchorTotal,
-      anchorCorrect
-    };
-  }
-
-  function renderProgress(){
-    const p = computeProgress();
-    metricText.textContent = `Correct connections: ${p.got} / ${p.total}`;
-
-    const pct = (p.total === 0) ? 0 : Math.round((p.got / p.total) * 100);
-    barInner.style.width = pct + "%";
-
-    const filledSlots = chain.filter(Boolean).length;
-    if (filledSlots === 0){
-      noteText.textContent = "Fill slots to see progress.";
-    } else if (filledSlots < chain.length){
-      noteText.textContent = `Placed ${filledSlots}/${chain.length} tiles. Progress updates as neighbors touch.`;
-    } else {
-      noteText.textContent = "All tiles placed — hit Check for final verification.";
-    }
   }
 
   function render(){
@@ -497,40 +389,18 @@
       anchors.style.display = "none";
     }
 
-    // Slots
-    slotsEl.innerHTML = "";
-    chain.forEach((tile, idx)=>{
-      const slot = document.createElement("div");
-      slot.className = "slot" + (tile ? " filled" : "");
-      slot.dataset.slot = String(idx);
+    // Open ends display
+    const ends = getOpenEnds();
+    leftValueEl.textContent = ends.left;
+    rightValueEl.textContent = ends.right;
 
-      slot.addEventListener("dragover", (e)=>{ e.preventDefault(); slot.classList.add("over"); });
-      slot.addEventListener("dragleave", ()=>slot.classList.remove("over"));
-      slot.addEventListener("drop", (e)=>{
-        e.preventDefault(); slot.classList.remove("over");
-        const id = e.dataTransfer.getData("text/plain");
-        placeTileInSlot(id, idx);
-      });
+    // Train tiles
+    trainEl.innerHTML = "";
+    trainTiles.forEach(t => trainEl.appendChild(makeTileUI(t, "train")));
 
-      slot.onclick = ()=>{
-        if (selectedId) placeTileInSlot(selectedId, idx);
-      };
-
-      if (tile){
-        slot.appendChild(makeTileUI(tile, "slot", idx));
-      } else {
-        const ph = document.createElement("div");
-        ph.className = "slotLabel";
-        ph.textContent = selectedId ? "Tap to place selected tile here" : ("Slot " + (idx+1));
-        slot.appendChild(ph);
-      }
-
-      slotsEl.appendChild(slot);
-    });
-
-    // Bank
+    // Bank tiles
     bankEl.innerHTML = "";
-    bankTiles.forEach(t => bankEl.appendChild(makeTileUI(t, "bank", -1)));
+    bankTiles.forEach(t => bankEl.appendChild(makeTileUI(t, "bank")));
 
     renderProgress();
   }
@@ -543,54 +413,78 @@
   function resetAll(){
     clearFeedback();
     selectedId = null;
-    chain = Array(answerTiles.length).fill(null);
-    bankTiles = shuffle(answerTiles.map(t => ({...t})));
+
+    // Start the train with ONE tile (like a real domino start)
+    const tiles = answerTiles.map(t => ({...t}));
+    shuffle(tiles);
+
+    trainTiles = [ tiles.shift() ]; // first tile on table
+    bankTiles = tiles;              // rest in hand/bank
+
     render();
   }
 
-  function checkChain(){
+  function checkTrain(){
     clearFeedback();
 
-    if (chain.some(x => !x)){
-      showFeedback("Fill every slot before checking.", "bad");
+    if (bankTiles.length > 0){
+      showFeedback("Play all tiles onto the train before checking.", "bad");
       return;
     }
 
-    const wrongAfter = [];
-    for (let i=0;i<chain.length-1;i++){
-      if (!eq(chain[i].right, chain[i+1].left)) wrongAfter.push(i);
+    const wrong = [];
+    for (let i=0;i<trainTiles.length-1;i++){
+      if (!eq(trainTiles[i].right, trainTiles[i+1].left)) wrong.push(i);
     }
 
+    // If anchors are shown, enforce correct start/end
     if (showAnchors){
-      if (!eq(chain[0].left, expectedStart)) wrongAfter.push(-1);
-      if (!eq(chain[chain.length-1].right, expectedEnd)) wrongAfter.push(chain.length-1);
+      if (!eq(trainTiles[0].left, expectedStart)) wrong.push(-1);
+      if (!eq(trainTiles[trainTiles.length-1].right, expectedEnd)) wrong.push(trainTiles.length-1);
     }
 
-    if (wrongAfter.length === 0){
-      showFeedback("✅ Nice! Chain rebuilt correctly.", "ok");
+    if (wrong.length === 0){
+      showFeedback("✅ Perfect train. Nicely played.", "ok");
       return;
     }
 
-    const mid = wrongAfter.filter(x=>x>=0);
+    const mid = wrong.filter(x=>x>=0);
     const parts = [];
     parts.push(`<b>Not quite.</b>`);
     if (mid.length){
       parts.push(`<div class="small mono">Mismatch after tile(s): ${mid.map(i=>i+1).join(", ")}</div>`);
     }
     if (showAnchors){
-      if (wrongAfter.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
-      if (wrongAfter.includes(chain.length-1)) parts.push(`<div class="small mono">End tile right side doesn’t match END.</div>`);
+      if (wrong.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
+      if (wrong.includes(trainTiles.length-1)) parts.push(`<div class="small mono">End tile right side doesn’t match END.</div>`);
     }
-    parts.push(`<div class="small">Tip: swap positions (and flip tiles if enabled). Auto-snap helps when neighbors are already placed.</div>`);
+    parts.push(`<div class="small">Remember: you can only play tiles on the ends (and flip if allowed).</div>`);
     showFeedback(parts.join(""), "bad");
   }
 
+  // End drop zones
+  function wireEndZone(el, side){
+    el.addEventListener("dragover", (e)=>{ e.preventDefault(); el.classList.add("over"); });
+    el.addEventListener("dragleave", ()=>el.classList.remove("over"));
+    el.addEventListener("drop", (e)=>{
+      e.preventDefault(); el.classList.remove("over");
+      const id = e.dataTransfer.getData("text/plain");
+      attemptPlay(id, side);
+    });
+    el.onclick = ()=>{
+      if (selectedId) attemptPlay(selectedId, side);
+    };
+  }
+
+  wireEndZone(leftEndEl, "left");
+  wireEndZone(rightEndEl, "right");
+
+  // Start game
+  resetAll();
+
   document.getElementById("sub").textContent = allowFlip
-    ? "Drag tiles into the chain, or tap a tile then tap a slot. Double-click a tile (or ↔) to flip."
-    : "Drag tiles into the chain, or tap a tile then tap a slot.";
-
-  render();
+    ? "Play tiles only on the LEFT or RIGHT end. Drag a tile to an end, or tap tile → tap an end. Double-click (or ↔) flips."
+    : "Play tiles only on the LEFT or RIGHT end. Drag a tile to an end, or tap tile → tap an end.";
 </script>
-
 </body>
 </html>
