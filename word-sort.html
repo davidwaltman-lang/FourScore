@@ -11,18 +11,19 @@
         
         /* Teacher UI */
         h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0; }
-        textarea { width: 100%; height: 60px; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ced4da; font-family: inherit; }
+        textarea { width: 100%; height: 60px; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ced4da; font-family: inherit; resize: vertical; }
         .cat-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .cat-input { flex: 1; display: flex; flex-direction: column; }
+        label { font-weight: bold; font-size: 0.9em; color: #34495e; }
         input[type="text"] { padding: 10px; border-radius: 8px; border: 1px solid #ced4da; margin-top: 5px; }
 
         /* Game UI */
         .game-area { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
         .word-bank { background: #fff; padding: 20px; border-radius: 12px; min-height: 80px; width: 100%; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; border: 2px dashed #cbd5e0; }
         .category-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; }
-        .category { background: #edf2f7; border: 2px solid #3498db; border-radius: 12px; min-height: 250px; width: 300px; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .word { background: #3498db; color: white; padding: 10px 18px; border-radius: 50px; cursor: grab; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: transform 0.2s; }
-        .word:active { cursor: grabbing; transform: scale(1.1); }
+        .category { background: #edf2f7; border: 2px solid #3498db; border-radius: 12px; min-height: 250px; width: 300px; padding: 15px; display: flex; flex-direction: column; align-items: center; transition: background 0.2s; }
+        .category.drag-over { background: #e2e8f0; border-style: dashed; }
+        .word { background: #3498db; color: white; padding: 10px 18px; border-radius: 50px; cursor: grab; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.15); user-select: none; }
         .word.correct { background: #28a745 !important; }
         .word.incorrect { background: #dc3545 !important; }
 
@@ -36,59 +37,53 @@
 
     <div id="setupPanel" class="panel">
         <h2>🛠 Teacher Game Creator</h2>
-        <p style="font-size: 0.9em; color: #666;">Create your custom sort, then copy the link for your Google Site.</p>
+        <p style="font-size: 0.9em; color: #666;">Enter your categories and words (separated by commas). Then copy the link for Google Sites.</p>
         
         <div class="cat-row">
             <div class="cat-input">
                 <label>Category A Name:</label>
-                <input type="text" id="cat1Name" placeholder="e.g. Even Numbers">
-                <textarea id="cat1Words" placeholder="2, 4, 6, 8, 10"></textarea>
+                <input type="text" id="cat1Name" placeholder="e.g. Nouns">
+                <textarea id="cat1Words" placeholder="Apple, Dog, Teacher"></textarea>
             </div>
             <div class="cat-input">
                 <label>Category B Name:</label>
-                <input type="text" id="cat2Name" placeholder="e.g. Odd Numbers">
-                <textarea id="cat2Words" placeholder="1, 3, 5, 7, 9"></textarea>
+                <input type="text" id="cat2Name" placeholder="e.g. Verbs">
+                <textarea id="cat2Words" placeholder="Run, Jump, Think"></textarea>
             </div>
         </div>
         
-        <button class="btn btn-primary" onclick="previewGame()">Preview Game</button>
+        <button class="btn btn-primary" onclick="previewGame()">Preview Board Below</button>
         <button id="copyBtn" class="btn btn-success" onclick="generateStudentLink()">📋 Copy Student Link for Google Sites</button>
     </div>
 
     <div id="gamePanel" class="game-area hidden">
-        <h2 id="displayTitle">Classroom Word Sort</h2>
+        <h2 id="displayTitle">Interactive Word Sort</h2>
         <div class="word-bank" id="wordBank" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
         <div class="category-container" id="categoryContainer"></div>
         <div style="margin-top: 30px; display: flex; gap: 15px;">
             <button class="btn btn-check" onclick="checkAnswers()">Check My Work</button>
-            <button class="btn" style="background: #a0aec0; color:white;" onclick="location.reload()">Reset Game</button>
+            <button class="btn" style="background: #a0aec0; color:white;" onclick="location.reload()">Reset / Clear</button>
         </div>
     </div>
 
 <script>
-    // 1. Check for incoming data in the URL
+    // 1. DATA HANDLING & URL LOGIC
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const encodedData = urlParams.get('game');
         
         if (encodedData) {
             try {
+                // Decode the data from the URL
                 const data = JSON.parse(decodeURIComponent(escape(atob(encodedData))));
                 renderGame(data);
                 document.getElementById('setupPanel').classList.add('hidden');
                 document.getElementById('gamePanel').classList.remove('hidden');
             } catch (e) {
                 console.error("Link Error:", e);
-                alert("The link seems to be broken!");
+                alert("This link appears to be incomplete or broken.");
             }
         }
-    }
-
-    function previewGame() {
-        const data = getGameData();
-        renderGame(data);
-        document.getElementById('gamePanel').classList.remove('hidden');
-        window.scrollTo(0, document.body.scrollHeight);
     }
 
     function getGameData() {
@@ -105,17 +100,17 @@
         const container = document.getElementById('categoryContainer');
         bank.innerHTML = ''; container.innerHTML = '';
 
-        // Create Categories
         [data.n1, data.n2].forEach(name => {
             const div = document.createElement('div');
             div.className = 'category';
             div.setAttribute('data-target', name);
             div.innerHTML = `<h3>${name}</h3>`;
-            div.ondrop = drop; div.ondragover = allowDrop;
+            div.ondrop = drop; 
+            div.ondragover = allowDrop;
+            div.ondragleave = (e) => e.currentTarget.classList.remove('drag-over');
             container.appendChild(div);
         });
 
-        // Mix words
         let mixed = [];
         data.w1.forEach(w => mixed.push({t: w, c: data.n1}));
         data.w2.forEach(w => mixed.push({t: w, c: data.n2}));
@@ -129,27 +124,71 @@
         });
     }
 
+    function previewGame() {
+        renderGame(getGameData());
+        document.getElementById('gamePanel').classList.remove('hidden');
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    // 2. THE FIX: ROBUST COPY TO CLIPBOARD
     function generateStudentLink() {
         const data = getGameData();
-        // Securely encode data for the URL
         const blob = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
         const cleanUrl = window.location.origin + window.location.pathname;
         const studentUrl = `${cleanUrl}?game=${blob}`;
         
-        navigator.clipboard.writeText(studentUrl).then(() => {
-            const btn = document.getElementById('copyBtn');
-            btn.innerText = "✅ Link Copied! Paste into Google Sites.";
-            setTimeout(() => { btn.innerText = "📋 Copy Student Link for Google Sites"; }, 3000);
-        });
+        // Fallback method using a temporary textarea
+        const textArea = document.createElement("textarea");
+        textArea.value = studentUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        let successful = false;
+        try {
+            successful = document.execCommand('copy');
+        } catch (err) {
+            successful = false;
+        }
+
+        document.body.removeChild(textArea);
+
+        if (successful) {
+            finalizeCopy();
+        } else {
+            alert("Manual Copy Required: Select the text below and copy it manually.\n\n" + studentUrl);
+        }
     }
 
-    // Standard Drag/Drop
-    function allowDrop(e) { e.preventDefault(); }
+    function finalizeCopy() {
+        const btn = document.getElementById('copyBtn');
+        const originalText = btn.innerText;
+        btn.innerText = "✅ LINK COPIED!";
+        btn.style.backgroundColor = "#2ecc71";
+        
+        alert("Link Copied! You can now paste this URL into your Google Sites 'Embed' tool.");
+        
+        setTimeout(() => { 
+            btn.innerText = originalText; 
+            btn.style.backgroundColor = "#28a745";
+        }, 3000);
+    }
+
+    // 3. INTERACTIVE LOGIC
+    function allowDrop(e) { 
+        e.preventDefault(); 
+        if(e.currentTarget.classList.contains('category')) e.currentTarget.classList.add('drag-over');
+    }
+    
     function drag(e) { e.dataTransfer.setData("text", e.target.id); }
+    
     function drop(e) {
         e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
         const id = e.dataTransfer.getData("text");
-        e.currentTarget.appendChild(document.getElementById(id));
+        const draggedElement = document.getElementById(id);
+        if (e.currentTarget.classList.contains('category') || e.currentTarget.id === "wordBank") {
+            e.currentTarget.appendChild(draggedElement);
+        }
     }
 
     function checkAnswers() {
