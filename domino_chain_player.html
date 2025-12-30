@@ -21,27 +21,99 @@
     font-weight:850; min-width:260px;
   }
 
-  .zones{display:grid;grid-template-columns:repeat(6, minmax(0,1fr));gap:10px;}
-  @media (max-width: 1000px){ .zones{grid-template-columns:repeat(3, minmax(0,1fr));} }
+  /* Slots are responsive and will "contain" the tile */
+  .zones{
+    display:grid;
+    grid-template-columns:repeat(6, minmax(0,1fr));
+    gap:10px;
+    align-items:stretch;
+  }
+  @media (max-width: 1000px){
+    .zones{grid-template-columns:repeat(3, minmax(0,1fr));}
+  }
 
   .slot{
-    border:2px dashed #cbd5e1;border-radius:14px;min-height:64px;
-    display:flex;align-items:center;justify-content:center;padding:8px;background:#f8fafc;
+    border:2px dashed #cbd5e1;
+    border-radius:14px;
+    min-height:72px;
+    background:#f8fafc;
+    padding:0;                 /* key */
+    display:flex;
+    align-items:stretch;       /* key */
+    justify-content:stretch;   /* key */
+    overflow:hidden;           /* key: makes it feel "inside" */
   }
-  .slot.filled{border-style:solid;border-color:#e5e7eb;background:#fff;}
   .slot.over{border-color:#111827;}
-
-  .bank{display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;}
-  .tile{
-    border:1px solid #d1d5db;border-radius:14px;background:#fff;
-    padding:10px; min-width:240px;
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    cursor:grab; user-select:none;
+  .slot .placeholder{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px;
   }
-  .tile:active{cursor:grabbing;}
-  .half{flex:1 1 auto;text-align:center;font-weight:850;padding:8px;border-radius:10px;background:#f3f4f6;}
-  .sep{width:2px;height:44px;background:#e5e7eb;border-radius:2px;}
-  .miniBtn{border:1px solid #d1d5db;background:#f9fafb;border-radius:10px;padding:6px 10px;font-weight:900;cursor:pointer;}
+  .slot.filled{
+    border-style:solid;
+    border-color:#e5e7eb;
+    background:#fff;
+  }
+
+  /* Tile base */
+  .tile{
+    border:1px solid #d1d5db;
+    border-radius:14px;
+    background:#fff;
+    padding:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    user-select:none;
+  }
+
+  /* Bank tiles can be wider */
+  .tile.bank{
+    min-width:260px;
+    cursor:grab;
+  }
+  .tile.bank:active{cursor:grabbing;}
+
+  /* Slot tiles must fit the slot */
+  .tile.in-slot{
+    width:100%;        /* key */
+    min-width:0;       /* key */
+    border:none;       /* key: slot already provides border */
+    border-radius:0;   /* key */
+    cursor:grab;
+  }
+  .tile.in-slot:active{cursor:grabbing;}
+
+  .half{
+    flex:1 1 0;
+    text-align:center;
+    font-weight:850;
+    padding:8px;
+    border-radius:10px;
+    background:#f3f4f6;
+    min-width:0;         /* allow wrapping */
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .sep{width:2px;height:44px;background:#e5e7eb;border-radius:2px;flex:0 0 auto;}
+
+  .miniBtn{
+    border:1px solid #d1d5db;background:#f9fafb;border-radius:10px;
+    padding:6px 10px;font-weight:900;cursor:pointer;flex:0 0 auto;
+  }
+
+  .bank{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:10px;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    background:#fafafa;
+  }
 
   .feedback{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;color:#111827;font-size:13px;}
   .ok{background:#ecfdf5;}
@@ -112,7 +184,7 @@
     throw "";
   }
 
-  // Build the "answer" tiles from consecutive steps
+  // Build answer tiles from consecutive steps
   const answerTiles = [];
   for (let i=0;i<steps.length-1;i++){
     answerTiles.push({ id: "t"+(i+1), left: steps[i], right: steps[i+1] });
@@ -140,9 +212,9 @@
     fbEl.innerHTML = "";
   }
 
-  function makeTileEl(tile){
+  function makeTileEl(tile, where){
     const el = document.createElement("div");
-    el.className = "tile";
+    el.className = "tile " + (where === "slot" ? "in-slot" : "bank");
     el.draggable = true;
     el.dataset.id = tile.id;
 
@@ -184,17 +256,14 @@
   function placeTileInSlot(id, idx){
     clearFeedback();
 
-    // If slot already has a tile, return it to bank
     if (chain[idx]) bankTiles.push(chain[idx]);
 
-    // From bank?
     const bi = bankTiles.findIndex(t => t.id === id);
     if (bi !== -1){
       chain[idx] = bankTiles.splice(bi,1)[0];
       render(); return;
     }
 
-    // From another slot?
     const si = chain.findIndex(t => t && t.id === id);
     if (si !== -1){
       const moving = chain[si];
@@ -238,16 +307,21 @@
       });
 
       if (tile){
-        const el = makeTileEl(tile);
+        const el = makeTileEl(tile, "slot");
+
         const back = document.createElement("button");
         back.className = "miniBtn";
         back.textContent = "↩";
         back.title = "Return to bank";
         back.onclick = (e)=>{ e.stopPropagation(); returnTileToBank(idx); };
+
         el.appendChild(back);
         slot.appendChild(el);
       } else {
-        slot.innerHTML = `<span class="small">Slot ${idx+1}</span>`;
+        const ph = document.createElement("div");
+        ph.className = "placeholder small";
+        ph.textContent = "Slot " + (idx+1);
+        slot.appendChild(ph);
       }
 
       slotsEl.appendChild(slot);
@@ -255,7 +329,7 @@
 
     // Bank
     bankEl.innerHTML = "";
-    bankTiles.forEach(t => bankEl.appendChild(makeTileEl(t)));
+    bankTiles.forEach(t => bankEl.appendChild(makeTileEl(t, "bank")));
   }
 
   function shuffleBank(){
@@ -278,16 +352,14 @@
       return;
     }
 
-    // Check adjacency: right of i equals left of i+1
     const wrongAfter = [];
     for (let i=0;i<chain.length-1;i++){
       if (!eq(chain[i].right, chain[i+1].left)) wrongAfter.push(i);
     }
 
-    // If anchors are shown, require correct start and end too
     if (showAnchors){
-      if (!eq(chain[0].left, expectedStart)) wrongAfter.push(-1); // start wrong
-      if (!eq(chain[chain.length-1].right, expectedEnd)) wrongAfter.push(chain.length-1); // end wrong
+      if (!eq(chain[0].left, expectedStart)) wrongAfter.push(-1);
+      if (!eq(chain[chain.length-1].right, expectedEnd)) wrongAfter.push(chain.length-1);
     }
 
     if (wrongAfter.length === 0){
@@ -296,16 +368,16 @@
     }
 
     const parts = [];
-    parts.push(`<b>Not quite.</b> ${wrongAfter.filter(x=>x>=0).length} mismatch(es) between tiles.`);
-    if (showAnchors){
-      if (wrongAfter.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
-      if (wrongAfter.includes(chain.length-1)) parts.push(`<div class="small mono">End tile right side doesn’t match END.</div>`);
-    }
+    parts.push(`<b>Not quite.</b>`);
     const mid = wrongAfter.filter(x=>x>=0);
     if (mid.length){
       parts.push(`<div class="small mono">Mismatch after slot(s): ${mid.map(i=>i+1).join(", ")}</div>`);
     }
-    parts.push(`<div class="small">Tip: try swapping positions (and flipping tiles if enabled).</div>`);
+    if (showAnchors){
+      if (wrongAfter.includes(-1)) parts.push(`<div class="small mono">Start tile left side doesn’t match START.</div>`);
+      if (wrongAfter.includes(chain.length-1)) parts.push(`<div class="small mono">End tile right side doesn’t match END.</div>`);
+    }
+    parts.push(`<div class="small">Tip: swap positions (and flip tiles if enabled).</div>`);
     showFeedback(parts.join(""), "bad");
   }
 
