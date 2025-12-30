@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Subject Word Sort</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .controls { background: #fff; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+        select { padding: 8px 15px; border-radius: 20px; border: 1px solid #ccc; font-size: 14px; outline: none; cursor: pointer; }
+        
+        .game-container { display: flex; gap: 20px; width: 100%; max-width: 800px; justify-content: center; flex-wrap: wrap; }
+        .category { background: #dfe6e9; border: 2px dashed #b2bec3; border-radius: 12px; min-height: 200px; width: 280px; padding: 15px; display: flex; flex-direction: column; align-items: center; transition: background 0.3s; margin-bottom: 10px; }
+        .category.drag-over { background: #d1d8e0; border-color: #3498db; }
+        .category h3 { margin-top: 0; color: #2d3436; font-size: 1.1em; }
+
+        .word-bank { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 760px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; border: 1px solid #ddd; min-height: 60px; }
+        .word { background: #3498db; color: white; padding: 8px 16px; border-radius: 20px; cursor: grab; font-weight: bold; user-select: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .word.correct { background: #27ae60 !important; }
+        .word.incorrect { background: #e74c3c !important; }
+
+        .btn-group { margin-top: 20px; display: flex; gap: 10px; }
+        button { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        #check-btn { background: #2d3436; color: white; }
+        #reset-btn { background: #95a5a6; color: white; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <label for="subjectSelect"><strong>Choose Topic:</strong></label>
+        <select id="subjectSelect" onchange="loadGame()">
+            <option value="science">Science (Living vs Non-Living)</option>
+            <option value="math">Math (Prime vs Composite)</option>
+            <option value="grammar">Grammar (Nouns vs Verbs)</option>
+        </select>
+    </div>
+
+    <div class="word-bank" id="wordBank" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+
+    <div class="game-container" id="categoryContainer">
+        </div>
+
+    <div class="btn-group">
+        <button id="check-btn" onclick="checkAnswers()">Check Answers</button>
+        <button id="reset-btn" onclick="loadGame()">Reset Board</button>
+    </div>
+
+<script>
+    // DATA CONFIGURATION
+    const games = {
+        science: {
+            categories: ["Living", "Non-Living"],
+            words: [
+                { text: "Oak Tree", cat: "Living" }, { text: "Mountain", cat: "Non-Living" },
+                { text: "Grasshopper", cat: "Living" }, { text: "Bicycle", cat: "Non-Living" },
+                { text: "Mushroom", cat: "Living" }, { text: "Cloud", cat: "Non-Living" }
+            ]
+        },
+        math: {
+            categories: ["Prime", "Composite"],
+            words: [
+                { text: "2", cat: "Prime" }, { text: "4", cat: "Composite" },
+                { text: "7", cat: "Prime" }, { text: "9", cat: "Composite" },
+                { text: "13", cat: "Prime" }, { text: "15", cat: "Composite" }
+            ]
+        },
+        grammar: {
+            categories: ["Nouns", "Verbs"],
+            words: [
+                { text: "Teacher", cat: "Nouns" }, { text: "Run", cat: "Verbs" },
+                { text: "Knowledge", cat: "Nouns" }, { text: "Analyze", cat: "Verbs" },
+                { text: "Classroom", cat: "Nouns" }, { text: "Discuss", cat: "Verbs" }
+            ]
+        }
+    };
+
+    function loadGame() {
+        const selected = document.getElementById('subjectSelect').value;
+        const gameData = games[selected];
+        const bank = document.getElementById('wordBank');
+        const container = document.getElementById('categoryContainer');
+
+        // Clear existing
+        bank.innerHTML = '';
+        container.innerHTML = '';
+
+        // Create Categories
+        gameData.categories.forEach(catName => {
+            const catDiv = document.createElement('div');
+            catDiv.className = 'category';
+            catDiv.setAttribute('data-target', catName);
+            catDiv.innerHTML = `<h3>${catName}</h3>`;
+            catDiv.ondrop = drop;
+            catDiv.ondragover = allowDrop;
+            catDiv.ondragleave = dragLeave;
+            container.appendChild(catDiv);
+        });
+
+        // Create Shuffled Words
+        const shuffled = [...gameData.words].sort(() => Math.random() - 0.5);
+        shuffled.forEach((item, i) => {
+            const wordDiv = document.createElement('div');
+            wordDiv.className = 'word';
+            wordDiv.draggable = true;
+            wordDiv.id = 'word-' + i;
+            wordDiv.innerText = item.text;
+            wordDiv.dataset.correctCat = item.cat;
+            wordDiv.addEventListener('dragstart', drag);
+            bank.appendChild(wordDiv);
+        });
+    }
+
+    // Drag & Drop Handlers
+    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
+    function dragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
+    function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+    
+    function drop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('drag-over');
+        const data = ev.dataTransfer.getData("text");
+        const draggedElement = document.getElementById(data);
+        ev.currentTarget.appendChild(draggedElement);
+    }
+
+    function checkAnswers() {
+        const words = document.querySelectorAll('.word');
+        words.forEach(word => {
+            const parentCat = word.parentElement.getAttribute('data-target');
+            if (parentCat === word.dataset.correctCat) {
+                word.classList.add('correct');
+                word.classList.remove('incorrect');
+            } else if (parentCat) {
+                word.classList.add('incorrect');
+                word.classList.remove('correct');
+            }
+        });
+    }
+
+    // Initial Start
+    loadGame();
+</script>
+</body>
+</html>
