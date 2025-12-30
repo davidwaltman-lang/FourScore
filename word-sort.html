@@ -3,80 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Word Sort Generator</title>
+    <title>Teacher's Custom Word Sort</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .setup-panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .panel { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 650px; margin-bottom: 20px; }
         .hidden { display: none !important; }
         
-        textarea { width: 100%; height: 80px; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
-        .category-config { display: flex; gap: 10px; margin-bottom: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        /* Teacher UI */
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0; }
+        textarea { width: 100%; height: 60px; margin: 10px 0; padding: 12px; border-radius: 8px; border: 1px solid #ced4da; font-family: inherit; }
+        .cat-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .cat-input { flex: 1; display: flex; flex-direction: column; }
+        input[type="text"] { padding: 10px; border-radius: 8px; border: 1px solid #ced4da; margin-top: 5px; }
 
-        /* Game Styles */
-        .game-container { display: flex; gap: 20px; width: 100%; max-width: 800px; justify-content: center; flex-wrap: wrap; }
-        .category { background: #dfe6e9; border: 2px dashed #b2bec3; border-radius: 12px; min-height: 200px; width: 280px; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .word-bank { background: white; padding: 20px; border-radius: 12px; min-height: 50px; width: 100%; max-width: 760px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; border: 1px solid #ddd; }
-        .word { background: #3498db; color: white; padding: 8px 16px; border-radius: 20px; cursor: grab; font-weight: bold; }
-        .word.correct { background: #27ae60 !important; }
-        .word.incorrect { background: #e74c3c !important; }
+        /* Game UI */
+        .game-area { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
+        .word-bank { background: #fff; padding: 20px; border-radius: 12px; min-height: 80px; width: 100%; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; border: 2px dashed #cbd5e0; }
+        .category-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; }
+        .category { background: #edf2f7; border: 2px solid #3498db; border-radius: 12px; min-height: 250px; width: 300px; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .word { background: #3498db; color: white; padding: 10px 18px; border-radius: 50px; cursor: grab; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: transform 0.2s; }
+        .word:active { cursor: grabbing; transform: scale(1.1); }
+        .word.correct { background: #28a745 !important; }
+        .word.incorrect { background: #dc3545 !important; }
 
-        button { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; background: #2d3436; color: white; }
-        #share-btn { background: #6c5ce7; margin-top: 10px; }
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #28a745; color: white; margin-top: 10px; width: 100%; }
+        .btn-check { background: #2c3e50; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="setupPanel" class="setup-panel">
-        <h2>🛠 Teacher Setup</h2>
-        <p>1. Name your two categories:</p>
-        <div class="category-config">
-            <input type="text" id="cat1Name" placeholder="e.g. Living">
-            <input type="text" id="cat2Name" placeholder="e.g. Non-Living">
-        </div>
-        <p>2. Enter words for Category 1 (comma separated):</p>
-        <textarea id="cat1Words" placeholder="Bird, Tree, Human"></textarea>
-        <p>3. Enter words for Category 2 (comma separated):</p>
-        <textarea id="cat2Words" placeholder="Rock, Car, Cloud"></textarea>
+    <div id="setupPanel" class="panel">
+        <h2>🛠 Teacher Game Creator</h2>
+        <p style="font-size: 0.9em; color: #666;">Create your custom sort, then copy the link for your Google Site.</p>
         
-        <button onclick="launchGame()">Preview Game</button>
-        <button id="share-btn" onclick="generateLink()">Copy Student Link</button>
+        <div class="cat-row">
+            <div class="cat-input">
+                <label>Category A Name:</label>
+                <input type="text" id="cat1Name" placeholder="e.g. Even Numbers">
+                <textarea id="cat1Words" placeholder="2, 4, 6, 8, 10"></textarea>
+            </div>
+            <div class="cat-input">
+                <label>Category B Name:</label>
+                <input type="text" id="cat2Name" placeholder="e.g. Odd Numbers">
+                <textarea id="cat2Words" placeholder="1, 3, 5, 7, 9"></textarea>
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="previewGame()">Preview Game</button>
+        <button id="copyBtn" class="btn btn-success" onclick="generateStudentLink()">📋 Copy Student Link for Google Sites</button>
     </div>
 
-    <div id="gamePanel" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-        <h2 id="gameTitle">Word Sort</h2>
+    <div id="gamePanel" class="game-area hidden">
+        <h2 id="displayTitle">Classroom Word Sort</h2>
         <div class="word-bank" id="wordBank" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
-        <div class="game-container" id="categoryContainer"></div>
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button onclick="checkAnswers()">Check Work</button>
-            <button onclick="location.reload()" style="background:#95a5a6;">Reset</button>
+        <div class="category-container" id="categoryContainer"></div>
+        <div style="margin-top: 30px; display: flex; gap: 15px;">
+            <button class="btn btn-check" onclick="checkAnswers()">Check My Work</button>
+            <button class="btn" style="background: #a0aec0; color:white;" onclick="location.reload()">Reset Game</button>
         </div>
     </div>
 
 <script>
-    // 1. Check if URL has data (Student Mode)
+    // 1. Check for incoming data in the URL
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('data')) {
-            const data = JSON.parse(atob(urlParams.get('data')));
-            renderGame(data);
-            document.getElementById('setupPanel').classList.add('hidden');
-            document.getElementById('gamePanel').classList.remove('hidden');
+        const encodedData = urlParams.get('game');
+        
+        if (encodedData) {
+            try {
+                const data = JSON.parse(decodeURIComponent(escape(atob(encodedData))));
+                renderGame(data);
+                document.getElementById('setupPanel').classList.add('hidden');
+                document.getElementById('gamePanel').classList.remove('hidden');
+            } catch (e) {
+                console.error("Link Error:", e);
+                alert("The link seems to be broken!");
+            }
         }
     }
 
-    function launchGame() {
-        const data = getFormData();
+    function previewGame() {
+        const data = getGameData();
         renderGame(data);
         document.getElementById('gamePanel').classList.remove('hidden');
+        window.scrollTo(0, document.body.scrollHeight);
     }
 
-    function getFormData() {
+    function getGameData() {
         return {
-            c1n: document.getElementById('cat1Name').value || "Cat 1",
-            c2n: document.getElementById('cat2Name').value || "Cat 2",
-            c1w: document.getElementById('cat1Words').value.split(',').map(s => s.trim()),
-            c2w: document.getElementById('cat2Words').value.split(',').map(s => s.trim())
+            n1: document.getElementById('cat1Name').value || "Category 1",
+            n2: document.getElementById('cat2Name').value || "Category 2",
+            w1: document.getElementById('cat1Words').value.split(',').map(s => s.trim()).filter(s => s),
+            w2: document.getElementById('cat2Words').value.split(',').map(s => s.trim()).filter(s => s)
         };
     }
 
@@ -86,7 +106,7 @@
         bank.innerHTML = ''; container.innerHTML = '';
 
         // Create Categories
-        [data.c1n, data.c2n].forEach(name => {
+        [data.n1, data.n2].forEach(name => {
             const div = document.createElement('div');
             div.className = 'category';
             div.setAttribute('data-target', name);
@@ -95,42 +115,51 @@
             container.appendChild(div);
         });
 
-        // Create Words
-        let allWords = [];
-        data.c1w.forEach(w => allWords.push({t: w, c: data.c1n}));
-        data.c2w.forEach(w => allWords.push({t: w, c: data.c2n}));
+        // Mix words
+        let mixed = [];
+        data.w1.forEach(w => mixed.push({t: w, c: data.n1}));
+        data.w2.forEach(w => mixed.push({t: w, c: data.n2}));
         
-        allWords.sort(() => Math.random() - 0.5).forEach((item, i) => {
+        mixed.sort(() => Math.random() - 0.5).forEach((item, i) => {
             const div = document.createElement('div');
-            div.className = 'word'; div.draggable = true; div.id = 'w'+i;
+            div.className = 'word'; div.draggable = true; div.id = 'word'+i;
             div.innerText = item.t; div.dataset.cor = item.c;
             div.addEventListener('dragstart', drag);
             bank.appendChild(div);
         });
     }
 
-    function generateLink() {
-        const data = btoa(JSON.stringify(getFormData()));
-        const baseUrl = window.location.href.split('?')[0];
-        const fullUrl = `${baseUrl}?data=${data}`;
-        navigator.clipboard.writeText(fullUrl);
-        alert("Link copied! Give this URL to students or embed it in Google Sites.");
+    function generateStudentLink() {
+        const data = getGameData();
+        // Securely encode data for the URL
+        const blob = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+        const cleanUrl = window.location.origin + window.location.pathname;
+        const studentUrl = `${cleanUrl}?game=${blob}`;
+        
+        navigator.clipboard.writeText(studentUrl).then(() => {
+            const btn = document.getElementById('copyBtn');
+            btn.innerText = "✅ Link Copied! Paste into Google Sites.";
+            setTimeout(() => { btn.innerText = "📋 Copy Student Link for Google Sites"; }, 3000);
+        });
     }
 
-    // Drag/Drop logic same as before
+    // Standard Drag/Drop
     function allowDrop(e) { e.preventDefault(); }
     function drag(e) { e.dataTransfer.setData("text", e.target.id); }
     function drop(e) {
         e.preventDefault();
-        const data = e.dataTransfer.getData("text");
-        e.currentTarget.appendChild(document.getElementById(data));
+        const id = e.dataTransfer.getData("text");
+        e.currentTarget.appendChild(document.getElementById(id));
     }
 
     function checkAnswers() {
         document.querySelectorAll('.word').forEach(w => {
-            const p = w.parentElement.getAttribute('data-target');
-            if (p === w.dataset.cor) w.classList.add('correct');
-            else if (p) w.classList.add('incorrect');
+            const parent = w.parentElement.getAttribute('data-target');
+            if (parent === w.dataset.cor) {
+                w.classList.add('correct'); w.classList.remove('incorrect');
+            } else if (parent) {
+                w.classList.add('incorrect'); w.classList.remove('correct');
+            }
         });
     }
 </script>
